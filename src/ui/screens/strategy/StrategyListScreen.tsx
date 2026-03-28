@@ -8,6 +8,7 @@ import { typography } from '../../../theme';
 import { strategies, Strategy } from '../../../data/strategies';
 import { usePortfolio } from '../../../contexts/PortfolioContext';
 import { StrategyStackParamList } from '../../navigation/types';
+import { usePriceData } from '../../../hooks/usePriceData';
 
 type Nav = NativeStackNavigationProp<StrategyStackParamList, 'StrategyList'>;
 
@@ -16,6 +17,21 @@ export function StrategyListScreen() {
   const navigation = useNavigation<Nav>();
   const { customStrategies } = usePortfolio();
   const [filter, setFilter] = useState<'all' | 'static' | 'dynamic' | 'custom'>('all');
+
+  // 시장 현황: 주요 자산 모멘텀 요약
+  const marketTickers = ['SPY', 'EFA', 'EEM', 'AGG', 'GLD'];
+  const marketData = usePriceData(marketTickers);
+  const marketStatus = useMemo(() => {
+    const m = marketData.momentum;
+    if (Object.keys(m).length === 0) return null;
+    const aboveSMA = marketTickers.filter((t) => m[t]?.aboveSMA10m === true).length;
+    const total = marketTickers.filter((t) => m[t]?.aboveSMA10m != null).length;
+    if (total === 0) return null;
+    const ratio = aboveSMA / total;
+    const label = ratio >= 0.8 ? '강세' : ratio >= 0.5 ? '보통' : ratio >= 0.2 ? '약세' : '위험';
+    const color = ratio >= 0.8 ? theme.success : ratio >= 0.5 ? theme.primary : ratio >= 0.2 ? theme.warning : theme.danger;
+    return { aboveSMA, total, ratio, label, color, tickers: m };
+  }, [marketData.momentum]);
 
   // 커스텀 전략을 Strategy 형태로 변환
   const customItems: Strategy[] = useMemo(
@@ -75,6 +91,40 @@ export function StrategyListScreen() {
           ))}
         </View>
       </View>
+      {/* 시장 현황 카드 */}
+      {marketStatus && (
+        <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: marketStatus.color }} />
+              <Text style={[typography.bodyBold, { color: theme.text }]}>시장 현황</Text>
+              <View style={{ backgroundColor: marketStatus.color + '22', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                <Text style={{ color: marketStatus.color, fontSize: 11, fontWeight: '700' }}>
+                  {marketStatus.label}
+                </Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+              {marketTickers.map((t) => {
+                const m = marketStatus.tickers[t];
+                if (!m) return null;
+                const up = m.aboveSMA10m;
+                return (
+                  <View key={t} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={[typography.small, { color: theme.textSecondary }]}>{t}</Text>
+                    <Text style={[typography.small, { color: up ? theme.success : theme.danger, fontWeight: '700' }]}>
+                      {m.r12m != null ? `${(m.r12m * 100).toFixed(1)}%` : '-'}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+            <Text style={[typography.small, { color: theme.textTertiary, marginTop: 6 }]}>
+              SMA 상위: {marketStatus.aboveSMA}/{marketStatus.total} · 12개월 수익률 기준
+            </Text>
+          </Card>
+        </View>
+      )}
       <AdBanner />
       <FlatList
         data={allItems}

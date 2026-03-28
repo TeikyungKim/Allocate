@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { Card } from '../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -6,7 +6,7 @@ import { typography } from '../../../theme';
 import { Strategy } from '../../../data/strategies';
 import { ETFUniverse } from '../../../data/etfs';
 import { usePriceData } from '../../../hooks/usePriceData';
-import { TickerMomentum } from '../../../services/priceService';
+import { TickerMomentum, fetchUnemploymentData, analyzeUnemployment } from '../../../services/priceService';
 
 interface Props {
   strategy: Strategy;
@@ -360,6 +360,18 @@ export function FormulaExplainer({ strategy, etfMap, onMomentumLoaded }: Props) 
     }
   }, [priceData.momentum, onMomentumLoaded]);
 
+  // LAA: fetch unemployment data
+  const [unemploymentInfo, setUnemploymentInfo] = useState<{
+    isAbove: boolean; current: number; sma12: number;
+  } | null>(null);
+  useEffect(() => {
+    if (dc.method === 'laa') {
+      fetchUnemploymentData().then((data) => {
+        if (data) setUnemploymentInfo(analyzeUnemployment(data));
+      });
+    }
+  }, [dc.method]);
+
   const roleColor = (role: AssetRow['role']) => {
     switch (role) {
       case 'canary': return theme.warning;
@@ -618,6 +630,49 @@ export function FormulaExplainer({ strategy, etfMap, onMomentumLoaded }: Props) 
           );
         })}
       </Card>
+
+      {/* LAA: 실업률 현재값 */}
+      {dc.method === 'laa' && (
+        <Card style={{ marginTop: 4 }}>
+          <Text style={[typography.h3, { color: theme.text, marginBottom: 8 }]}>
+            미국 실업률 현재값
+          </Text>
+          {unemploymentInfo ? (
+            <View style={[s.scoreBox, {
+              backgroundColor: unemploymentInfo.isAbove
+                ? (theme.dangerLight ?? '#FFEBEE')
+                : (theme.successLight ?? '#E8F5E9'),
+            }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={[typography.small, { color: theme.textSecondary }]}>현재 실업률</Text>
+                <Text style={[typography.bodyBold, { color: theme.text, fontSize: 18 }]}>
+                  {unemploymentInfo.current.toFixed(1)}%
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                <Text style={[typography.small, { color: theme.textSecondary }]}>12개월 이동평균</Text>
+                <Text style={[typography.bodyBold, { color: theme.textSecondary }]}>
+                  {unemploymentInfo.sma12.toFixed(2)}%
+                </Text>
+              </View>
+              <View style={{ marginTop: 8, padding: 8, borderRadius: 6, backgroundColor: unemploymentInfo.isAbove ? (theme.danger + '15') : (theme.success + '15') }}>
+                <Text style={[typography.bodyBold, {
+                  color: unemploymentInfo.isAbove ? theme.danger : theme.success,
+                  textAlign: 'center',
+                }]}>
+                  {unemploymentInfo.isAbove
+                    ? '실업률 상승 추세 → 미국주식 → 단기채 전환'
+                    : '실업률 안정 → 미국주식 유지'}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={[typography.small, { color: theme.textTertiary, fontStyle: 'italic' }]}>
+              실업률 데이터 로딩 중...
+            </Text>
+          )}
+        </Card>
+      )}
 
       {/* 3. 판단 규칙 상세 */}
       {decisionRules.length > 0 && (

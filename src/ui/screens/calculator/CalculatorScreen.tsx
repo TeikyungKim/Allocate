@@ -15,6 +15,7 @@ import { usePortfolio, SavedPortfolio, CustomStrategy } from '../../../contexts/
 import { showInterstitialAd } from '../../../services/adService';
 import { CalculatorStackParamList } from '../../navigation/types';
 import { useDynamicStrategy } from '../../../hooks/useDynamicStrategy';
+import * as Haptics from 'expo-haptics';
 
 type Universe = 'korea' | 'retirement' | 'us';
 type Route = RouteProp<CalculatorStackParamList, 'Calculator'>;
@@ -97,6 +98,7 @@ export function CalculatorScreen() {
   const handleCalculate = () => {
     if (amount <= 0) return;
     setShowResult(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     showInterstitialAd();
   };
 

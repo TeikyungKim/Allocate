@@ -1,8 +1,8 @@
 /**
  * Compute actual dynamic strategy allocations from real momentum data.
  *
- * Takes strategy config + momentum scores → returns asset allocations
- * that reflect the current market conditions.
+ * Takes strategy config + momentum scores + optional unemployment data
+ * → returns asset allocations that reflect current market conditions.
  */
 import { Strategy, StrategyAllocation } from '../../data/strategies';
 import { TickerMomentum } from '../../services/priceService';
@@ -17,6 +17,12 @@ const AC_TO_US: Record<string, string> = {
 };
 
 type MomentumMap = Record<string, TickerMomentum>;
+
+export interface UnemploymentInfo {
+  isAbove: boolean;  // 현재 실업률 > 12개월 이동평균
+  current: number;
+  sma12: number;
+}
 
 function getMomentum(momentum: MomentumMap, assetClass: string): TickerMomentum | null {
   const ticker = AC_TO_US[assetClass];
@@ -49,11 +55,12 @@ function topN(
   scoreFn: (ac: string) => number | null,
   n: number,
 ): string[] {
-  const scored = assets
+  return assets
     .map((ac) => ({ ac, score: scoreFn(ac) }))
     .filter((x) => x.score != null)
-    .sort((a, b) => b.score! - a.score!);
-  return scored.slice(0, n).map((x) => x.ac);
+    .sort((a, b) => b.score! - a.score!)
+    .slice(0, n)
+    .map((x) => x.ac);
 }
 
 /** Rank assets with positive score only, return top N */
@@ -62,11 +69,12 @@ function topNPositive(
   scoreFn: (ac: string) => number | null,
   n: number,
 ): string[] {
-  const scored = assets
+  return assets
     .map((ac) => ({ ac, score: scoreFn(ac) }))
     .filter((x) => x.score != null && x.score > 0)
-    .sort((a, b) => b.score! - a.score!);
-  return scored.slice(0, n).map((x) => x.ac);
+    .sort((a, b) => b.score! - a.score!)
+    .slice(0, n)
+    .map((x) => x.ac);
 }
 
 function equalWeight(assets: string[]): StrategyAllocation[] {
@@ -79,13 +87,26 @@ function single(ac: string): StrategyAllocation[] {
   return [{ assetClass: ac, weight: 100 }];
 }
 
+/** Merge duplicate asset classes by summing weights */
+function mergeAllocations(allocs: StrategyAllocation[]): StrategyAllocation[] {
+  const map = new Map<string, number>();
+  for (const a of allocs) {
+    map.set(a.assetClass, (map.get(a.assetClass) ?? 0) + a.weight);
+  }
+  return Array.from(map.entries()).map(([assetClass, weight]) => ({ assetClass, weight }));
+}
+
 /**
- * Compute dynamic allocation based on strategy rules and real momentum data.
+ * Compute dynamic allocation based on strategy rules and real data.
+ * @param strategy - Strategy definition
+ * @param momentum - US ticker → momentum data
+ * @param unemployment - Optional unemployment data for LAA
  * Returns null if insufficient data to compute.
  */
 export function computeDynamicAllocation(
   strategy: Strategy,
   momentum: MomentumMap,
+  unemployment?: UnemploymentInfo | null,
 ): StrategyAllocation[] | null {
   const dc = strategy.dynamicConfig;
   if (!dc) return null;
@@ -95,7 +116,10 @@ export function computeDynamicAllocation(
   const canary = dc.canaryAssets ?? [];
 
   switch (dc.method) {
+    // ── 듀얼 모멘텀 계열 ──────────────────────────
+
     case 'dual-momentum': {
+      // SPY vs EFA 12개월 수익률 비교 → 승자, 절대 모멘텀 필터
       const rSPY = getR12m(momentum, '미국주식');
       const rEFA = getR12m(momentum, '선진국주식');
       if (rSPY == null || rEFA == null) return null;
@@ -105,6 +129,7 @@ export function computeDynamicAllocation(
     }
 
     case 'adm': {
+      // 가속 듀얼 모멘텀: (R_1m + R_3m + R_6m) / 3 평균으로 비교
       const sSPY = getAvgMom(momentum, '미국주식');
       const sEFA = getAvgMom(momentum, '선진국주식');
       if (sSPY == null || sEFA == null) return null;
@@ -114,6 +139,7 @@ export function computeDynamicAllocation(
     }
 
     case 'cam': {
+      // 복합 절대 모멘텀: 4기간 평균 (1/3/6/12m)
       const sSPY = getAvgMom(momentum, '미국주식');
       const sEFA = getAvgMom(momentum, '선진국주식');
       if (sSPY == null || sEFA == null) return null;
@@ -122,80 +148,8 @@ export function computeDynamicAllocation(
       return winnerS > 0 ? single(winner) : single('미국채권');
     }
 
-    case 'gtaa': {
-      // 5 assets: include if above SMA_10m, equal weight 20% each
-      const passing: string[] = [];
-      for (const ac of off) {
-        const above = getAboveSMA(momentum, ac);
-        if (above == null) return null; // insufficient data
-        if (above) passing.push(ac);
-      }
-      if (passing.length === 0) return single('단기채');
-      // Each passing asset gets 20% (fixed), rest goes to cash
-      const result: StrategyAllocation[] = passing.map((ac) => ({ assetClass: ac, weight: 20 }));
-      const cashWeight = 100 - passing.length * 20;
-      if (cashWeight > 0) result.push({ assetClass: '단기채', weight: cashWeight });
-      return result;
-    }
-
-    case 'vaa':
-    case 'vigilant': {
-      // All offensive must have 13612W > 0 → top-1, else defensive top-1
-      const scores = off.map((ac) => ({ ac, score: getScore13612W(momentum, ac) }));
-      if (scores.some((s) => s.score == null)) return null;
-      const allPositive = scores.every((s) => s.score! > 0);
-      if (allPositive) {
-        const best = topN(off, (ac) => getScore13612W(momentum, ac), 1);
-        return single(best[0]);
-      }
-      const bestDef = topN(def, (ac) => getScore13612W(momentum, ac), 1);
-      return bestDef.length > 0 ? single(bestDef[0]) : single(def[0] ?? '단기채');
-    }
-
-    case 'daa': {
-      // Canary: both > 0 → top-6 offensive. One < 0 → 50/50. Both < 0 → defensive
-      const cScores = canary.map((ac) => getScore13612W(momentum, ac));
-      if (cScores.some((s) => s == null)) return null;
-      const negCount = cScores.filter((s) => s! <= 0).length;
-
-      const scoreFn = (ac: string) => getScore13612W(momentum, ac);
-
-      if (negCount === 0) {
-        // All canary positive → offensive top-6 equal weight
-        const top = topN(off, scoreFn, 6);
-        return equalWeight(top);
-      } else if (negCount === 1) {
-        // One negative → 50% offensive top-3 + 50% defensive top-1
-        const topOff = topN(off, scoreFn, 3);
-        const topDef = topN(def, scoreFn, 1);
-        const result: StrategyAllocation[] = topOff.map((ac) => ({
-          assetClass: ac, weight: 50 / topOff.length,
-        }));
-        if (topDef.length > 0) result.push({ assetClass: topDef[0], weight: 50 });
-        return result;
-      } else {
-        // Both negative → defensive top-1
-        const topDef = topN(def, scoreFn, 1);
-        return topDef.length > 0 ? single(topDef[0]) : single('단기채');
-      }
-    }
-
-    case 'baa': {
-      // Canary both > 0 → offensive top-1. Else → defensive top-1
-      const cScores = canary.map((ac) => getScore13612W(momentum, ac));
-      if (cScores.some((s) => s == null)) return null;
-      const allPos = cScores.every((s) => s! > 0);
-      const scoreFn = (ac: string) => getScore13612W(momentum, ac);
-      if (allPos) {
-        const best = topN(off, scoreFn, 1);
-        return single(best[0]);
-      }
-      const bestDef = topN(def, scoreFn, 1);
-      return bestDef.length > 0 ? single(bestDef[0]) : single('단기채');
-    }
-
     case 'papa-dm': {
-      // 3 legs, each independent dual momentum
+      // 3레그 각각 독립 듀얼 모멘텀 (R_12m)
       const legs: [string, string, number][] = [
         ['미국주식', '선진국주식', 34],
         ['장기채', '미국채권', 33],
@@ -210,12 +164,11 @@ export function computeDynamicAllocation(
         const winnerR = rA >= rB ? rA : rB;
         result.push({ assetClass: winnerR > 0 ? winner : '단기채', weight });
       }
-      // Merge duplicate 단기채
       return mergeAllocations(result);
     }
 
     case 'edm': {
-      // 3 legs: dual momentum + absolute momentum for each
+      // 확장 듀얼 모멘텀: 주식 듀얼 + 리츠 절대 + 금 절대
       const r12SPY = getR12m(momentum, '미국주식');
       const r12EFA = getR12m(momentum, '선진국주식');
       const r12REIT = getR12m(momentum, '리츠');
@@ -223,19 +176,89 @@ export function computeDynamicAllocation(
       if (r12SPY == null || r12EFA == null || r12REIT == null || r12GOLD == null) return null;
 
       const result: StrategyAllocation[] = [];
-      // Leg 1: SPY vs EFA
       const leg1Winner = r12SPY >= r12EFA ? '미국주식' : '선진국주식';
       const leg1R = r12SPY >= r12EFA ? r12SPY : r12EFA;
       result.push({ assetClass: leg1R > 0 ? leg1Winner : '미국채권', weight: 34 });
-      // Leg 2: REIT absolute
       result.push({ assetClass: r12REIT > 0 ? '리츠' : '미국채권', weight: 33 });
-      // Leg 3: Gold absolute
       result.push({ assetClass: r12GOLD > 0 ? '금' : '미국채권', weight: 33 });
       return mergeAllocations(result);
     }
 
+    // ── SMA 필터 계열 ──────────────────────────────
+
+    case 'gtaa': {
+      // 5자산 각각 현재가 > SMA_10m 이면 포함 (각 20%), 나머지 현금
+      const passing: string[] = [];
+      for (const ac of off) {
+        const above = getAboveSMA(momentum, ac);
+        if (above == null) return null;
+        if (above) passing.push(ac);
+      }
+      if (passing.length === 0) return single('단기채');
+      const result: StrategyAllocation[] = passing.map((ac) => ({ assetClass: ac, weight: 20 }));
+      const cashWeight = 100 - passing.length * 20;
+      if (cashWeight > 0) result.push({ assetClass: '단기채', weight: cashWeight });
+      return result;
+    }
+
+    // ── 13612W 모멘텀 계열 ─────────────────────────
+
+    case 'vaa':
+    case 'vigilant': {
+      // 공격 전부 양수 → top-1, 하나라도 음수 → 방어 top-1
+      const scores = off.map((ac) => ({ ac, score: getScore13612W(momentum, ac) }));
+      if (scores.some((s) => s.score == null)) return null;
+      const allPositive = scores.every((s) => s.score! > 0);
+      if (allPositive) {
+        const best = topN(off, (ac) => getScore13612W(momentum, ac), 1);
+        return single(best[0]);
+      }
+      const bestDef = topN(def, (ac) => getScore13612W(momentum, ac), 1);
+      return bestDef.length > 0 ? single(bestDef[0]) : single(def[0] ?? '단기채');
+    }
+
+    case 'daa': {
+      // 카나리아 2개 점검 → 0개 음수: top-6 공격 / 1개: 50:50 / 2개: 방어
+      const cScores = canary.map((ac) => getScore13612W(momentum, ac));
+      if (cScores.some((s) => s == null)) return null;
+      const negCount = cScores.filter((s) => s! <= 0).length;
+      const scoreFn = (ac: string) => getScore13612W(momentum, ac);
+
+      if (negCount === 0) {
+        const top = topN(off, scoreFn, 6);
+        return equalWeight(top);
+      } else if (negCount === 1) {
+        const topOff = topN(off, scoreFn, 3);
+        const topDef = topN(def, scoreFn, 1);
+        const result: StrategyAllocation[] = topOff.map((ac) => ({
+          assetClass: ac, weight: 50 / topOff.length,
+        }));
+        if (topDef.length > 0) result.push({ assetClass: topDef[0], weight: 50 });
+        return result;
+      } else {
+        const topDef = topN(def, scoreFn, 1);
+        return topDef.length > 0 ? single(topDef[0]) : single('단기채');
+      }
+    }
+
+    case 'baa': {
+      // 카나리아 전부 양수 → 공격 top-1, 그 외 → 방어 top-1
+      const cScores = canary.map((ac) => getScore13612W(momentum, ac));
+      if (cScores.some((s) => s == null)) return null;
+      const allPos = cScores.every((s) => s! > 0);
+      const scoreFn = (ac: string) => getScore13612W(momentum, ac);
+      if (allPos) {
+        const best = topN(off, scoreFn, 1);
+        return single(best[0]);
+      }
+      const bestDef = topN(def, scoreFn, 1);
+      return bestDef.length > 0 ? single(bestDef[0]) : single('단기채');
+    }
+
+    // ── 브레드스(Breadth) 보호 계열 ──────────────────
+
     case 'paa': {
-      // Breadth: count assets above SMA
+      // BF = SMA 위 자산 수, 채권비중 = (1 - BF/N)^2
       const total = off.length;
       let bf = 0;
       for (const ac of off) {
@@ -247,7 +270,6 @@ export function computeDynamicAllocation(
       const offWeight = 100 - bondWeight;
       if (offWeight <= 0) return single('단기채');
 
-      // Offensive: top-6 with positive momentum
       const scoreFn = (ac: string) => getScore13612W(momentum, ac);
       const topOff = topNPositive(off, scoreFn, 6);
       if (topOff.length === 0) return single('단기채');
@@ -259,7 +281,7 @@ export function computeDynamicAllocation(
     }
 
     case 'pdm': {
-      // PAA breadth + dual momentum
+      // PAA 브레드스 + 듀얼 모멘텀 결합
       const total = off.length;
       let bf = 0;
       for (const ac of off) {
@@ -275,7 +297,6 @@ export function computeDynamicAllocation(
         return bestDef.length > 0 ? single(bestDef[0]) : single('단기채');
       }
 
-      // Dual momentum for offensive portion
       const rSPY = getR12m(momentum, '미국주식');
       const rEFA = getR12m(momentum, '선진국주식');
       if (rSPY == null || rEFA == null) return null;
@@ -292,7 +313,7 @@ export function computeDynamicAllocation(
     }
 
     case 'gpm': {
-      // Generalized: breadth + top-K
+      // 일반화 보호 모멘텀: 브레드스 + Top-K
       const total = off.length;
       let bf = 0;
       for (const ac of off) {
@@ -322,8 +343,10 @@ export function computeDynamicAllocation(
       return result;
     }
 
+    // ── 모멘텀 + 최적화 ──────────────────────────────
+
     case 'aaa': {
-      // Top 5 by R_6m, simplified equal weight (no min-variance without daily data)
+      // 6개월 모멘텀 상위 5개, 동일비중 (최소분산은 일간 데이터 필요)
       const scored = off
         .map((ac) => ({ ac, r6: getR6m(momentum, ac) }))
         .filter((x) => x.r6 != null)
@@ -334,20 +357,23 @@ export function computeDynamicAllocation(
       return equalWeight(top5.map((x) => x.ac));
     }
 
-    case 'laa':
-      // Needs unemployment data — cannot compute, use default
-      return null;
+    // ── 실업률 기반 ──────────────────────────────────
+
+    case 'laa': {
+      // 기본: 미국주식 25%, 선진국주식 25%, 미국채권 25%, 금 25%
+      // 실업률 > 12개월 SMA → 미국주식 25% → 단기채 25%로 교체
+      if (!unemployment) return null;
+
+      const result: StrategyAllocation[] = [
+        { assetClass: unemployment.isAbove ? '단기채' : '미국주식', weight: 25 },
+        { assetClass: '선진국주식', weight: 25 },
+        { assetClass: '미국채권', weight: 25 },
+        { assetClass: '금', weight: 25 },
+      ];
+      return result;
+    }
 
     default:
       return null;
   }
-}
-
-/** Merge duplicate asset classes by summing weights */
-function mergeAllocations(allocs: StrategyAllocation[]): StrategyAllocation[] {
-  const map = new Map<string, number>();
-  for (const a of allocs) {
-    map.set(a.assetClass, (map.get(a.assetClass) ?? 0) + a.weight);
-  }
-  return Array.from(map.entries()).map(([assetClass, weight]) => ({ assetClass, weight }));
 }

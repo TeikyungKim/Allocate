@@ -1,12 +1,13 @@
 /**
  * Hook that returns a strategy with real-time dynamic allocations applied.
  * For static strategies, returns the original strategy unchanged.
- * For dynamic strategies, fetches momentum data and computes actual allocations.
+ * For dynamic strategies, fetches momentum + unemployment data and computes actual allocations.
  */
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Strategy } from '../data/strategies';
 import { usePriceData } from './usePriceData';
-import { computeDynamicAllocation } from '../core/engine/dynamicAllocator';
+import { computeDynamicAllocation, UnemploymentInfo } from '../core/engine/dynamicAllocator';
+import { fetchUnemploymentData, analyzeUnemployment } from '../services/priceService';
 
 /** Map: asset class → US reference ticker */
 const AC_TO_US: Record<string, string> = {
@@ -18,12 +19,10 @@ const AC_TO_US: Record<string, string> = {
 };
 
 export function useDynamicStrategy(strategy: Strategy): {
-  /** Strategy with real-time allocations applied (or original if static/no data) */
   effectiveStrategy: Strategy;
-  /** Whether real-time data was applied */
   isDynamic: boolean;
-  /** Loading state */
   loading: boolean;
+  unemploymentInfo: UnemploymentInfo | null;
 } {
   const dc = strategy.dynamicConfig;
 
@@ -37,32 +36,51 @@ export function useDynamicStrategy(strategy: Strategy): {
     return Array.from(set);
   }, [dc]);
 
-  // Map to US tickers
   const usTickers = useMemo(() => {
     return [...new Set(allAssets.map((ac) => AC_TO_US[ac]).filter(Boolean))];
   }, [allAssets]);
 
   const priceData = usePriceData(usTickers);
 
+  // Fetch unemployment data for LAA
+  const [unemploymentInfo, setUnemploymentInfo] = useState<UnemploymentInfo | null>(null);
+  useEffect(() => {
+    if (dc?.method === 'laa') {
+      fetchUnemploymentData().then((data) => {
+        if (data) {
+          const info = analyzeUnemployment(data);
+          setUnemploymentInfo(info);
+        }
+      });
+    }
+  }, [dc?.method]);
+
   const result = useMemo(() => {
     if (!dc || Object.keys(priceData.momentum).length === 0) {
+      // LAA can work with just unemployment data
+      if (dc?.method === 'laa' && unemploymentInfo) {
+        const computed = computeDynamicAllocation(strategy, priceData.momentum, unemploymentInfo);
+        if (computed) {
+          return { effectiveStrategy: { ...strategy, defaultAllocations: computed }, isDynamic: true };
+        }
+      }
       return { effectiveStrategy: strategy, isDynamic: false };
     }
 
-    const computed = computeDynamicAllocation(strategy, priceData.momentum);
+    const computed = computeDynamicAllocation(strategy, priceData.momentum, unemploymentInfo);
     if (!computed) {
       return { effectiveStrategy: strategy, isDynamic: false };
     }
 
-    const effectiveStrategy: Strategy = {
-      ...strategy,
-      defaultAllocations: computed,
+    return {
+      effectiveStrategy: { ...strategy, defaultAllocations: computed },
+      isDynamic: true,
     };
-    return { effectiveStrategy, isDynamic: true };
-  }, [strategy, dc, priceData.momentum]);
+  }, [strategy, dc, priceData.momentum, unemploymentInfo]);
 
   return {
     ...result,
     loading: priceData.loading,
+    unemploymentInfo,
   };
 }

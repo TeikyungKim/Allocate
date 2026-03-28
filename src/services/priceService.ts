@@ -130,6 +130,54 @@ export async function clearPriceCache(): Promise<void> {
   } catch { /* ignore */ }
 }
 
+// ── Unemployment data ──
+
+export interface UnemploymentData {
+  series: string;
+  data: { date: string; value: number }[];  // oldest → newest
+  fetchedAt: string;
+}
+
+/**
+ * Fetch US unemployment rate data from GitHub Pages.
+ */
+export async function fetchUnemploymentData(): Promise<UnemploymentData | null> {
+  try {
+    const cached = await AsyncStorage.getItem(CACHE_PREFIX + 'unemployment');
+    if (cached) {
+      const data: UnemploymentData = JSON.parse(cached);
+      const age = Date.now() - new Date(data.fetchedAt).getTime();
+      if (age < CACHE_TTL_MS) return data;
+    }
+
+    const url = `${getPriceBaseUrl()}/unemployment.json`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data: UnemploymentData = await res.json();
+    await AsyncStorage.setItem(CACHE_PREFIX + 'unemployment', JSON.stringify(data));
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if unemployment rate is above its 12-month moving average.
+ * Returns { isAbove, current, sma12 } or null if insufficient data.
+ */
+export function analyzeUnemployment(data: UnemploymentData): {
+  isAbove: boolean;
+  current: number;
+  sma12: number;
+} | null {
+  const vals = data.data;
+  if (vals.length < 13) return null;
+  const current = vals[vals.length - 1].value;
+  const past12 = vals.slice(-13, -1);
+  const sma12 = past12.reduce((s, v) => s + v.value, 0) / past12.length;
+  return { isAbove: current > sma12, current, sma12 };
+}
+
 /**
  * Fetch the manifest to check data freshness.
  */

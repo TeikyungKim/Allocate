@@ -114,6 +114,43 @@ async function main() {
   };
   writeFileSync(join(OUTPUT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
+  // ── Fetch US unemployment rate from BLS (no API key needed) ──
+  console.log('\n--- Fetching US unemployment rate (BLS) ---');
+  try {
+    const currentYear = new Date().getFullYear();
+    const blsRes = await fetch('https://api.bls.gov/publicAPI/v1/timeseries/data/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seriesid: ['LNS14000000'],
+        startyear: String(currentYear - 2),
+        endyear: String(currentYear),
+      }),
+    });
+    const blsJson = await blsRes.json();
+    if (blsJson.status === 'REQUEST_SUCCEEDED') {
+      const rawData = blsJson.Results.series[0].data;
+      // Convert to {date, value} sorted oldest → newest
+      const unemployment = rawData
+        .filter((d) => d.period !== 'M13') // exclude annual avg
+        .map((d) => ({
+          date: `${d.year}-${d.period.replace('M', '')}`,
+          value: parseFloat(d.value),
+        }))
+        .reverse();
+      writeFileSync(
+        join(OUTPUT_DIR, 'unemployment.json'),
+        JSON.stringify({ series: 'UNRATE', data: unemployment, fetchedAt: new Date().toISOString() }),
+      );
+      console.log(`  ✓ Unemployment: ${unemployment.length} months`);
+      manifest.hasUnemployment = true;
+    } else {
+      console.error('  ✗ BLS API error:', blsJson.message?.[0] ?? 'Unknown');
+    }
+  } catch (e) {
+    console.error('  ✗ Unemployment fetch error:', e.message);
+  }
+
   console.log(`\n=== Done ===`);
   console.log(`Success: ${results.success.length} / ${ALL_TICKERS.length}`);
   if (results.failed.length > 0) {
