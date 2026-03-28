@@ -1,24 +1,28 @@
 /**
- * Historical price data service using Twelve Data API.
- * - Free tier: 800 req/day, 8 req/min
- * - CORS OK: works from browser
- * - Supports US ETFs (SPY, EFA...) and Korean ETFs (069500, 360750...)
+ * Historical price data service.
  *
- * Prices are cached in AsyncStorage with 24h TTL to minimize API calls.
+ * Data source: GitHub Pages (updated daily by GitHub Actions + Twelve Data API)
+ * URL pattern: https://{owner}.github.io/{repo}/prices/{TICKER}.json
+ *
+ * - No API key needed in the app
+ * - No CORS issues (GitHub Pages serves with proper headers)
+ * - Cached in AsyncStorage with 6h TTL
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE = 'https://api.twelvedata.com';
 const CACHE_PREFIX = '@allocate:prices:';
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours (data updated daily)
 
-// API key from env — set EXPO_PUBLIC_TWELVE_DATA_API_KEY in .env
-function getApiKey(): string | null {
-  try {
-    return process.env.EXPO_PUBLIC_TWELVE_DATA_API_KEY ?? null;
-  } catch {
-    return null;
-  }
+/**
+ * GitHub Pages base URL for price data.
+ * Set EXPO_PUBLIC_PRICE_DATA_URL in .env to override (e.g., for custom domain).
+ * Default: GitHub Pages URL derived from repo.
+ */
+function getPriceBaseUrl(): string {
+  const custom = process.env.EXPO_PUBLIC_PRICE_DATA_URL;
+  if (custom) return custom.replace(/\/$/, '');
+  // Default: TeikyungKim.github.io/Allocate
+  return 'https://teikyungkim.github.io/Allocate/prices';
 }
 
 export interface PricePoint {
@@ -33,31 +37,19 @@ export interface TickerPriceData {
 }
 
 /**
- * Fetch weekly close prices for a single ticker (52 weeks = 1 year).
- * Returns oldest → newest.
+ * Fetch price data for a ticker from GitHub Pages.
  */
-async function fetchFromAPI(ticker: string): Promise<PricePoint[]> {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error('API_KEY_MISSING');
-
-  const url = `${API_BASE}/time_series?symbol=${encodeURIComponent(ticker)}&interval=1week&outputsize=60&apikey=${apiKey}`;
+async function fetchFromGitHubPages(ticker: string): Promise<TickerPriceData> {
+  const url = `${getPriceBaseUrl()}/${encodeURIComponent(ticker)}.json`;
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`HTTP_${res.status}`);
   }
-
-  const json = await res.json();
-  if (json.status === 'error') {
-    throw new Error(json.message ?? 'API_ERROR');
+  const data: TickerPriceData = await res.json();
+  if (!data.prices || data.prices.length === 0) {
+    throw new Error('NO_DATA');
   }
-
-  const values: { datetime: string; close: string }[] = json.values ?? [];
-  if (values.length === 0) throw new Error('NO_DATA');
-
-  // API returns newest first → reverse to oldest first
-  return values
-    .map((v) => ({ date: v.datetime, close: parseFloat(v.close) }))
-    .reverse();
+  return data;
 }
 
 /**
@@ -83,64 +75,46 @@ async function setCache(data: TickerPriceData): Promise<void> {
 }
 
 /**
- * Get price data for a ticker (cache first, then API).
+ * Get price data for a ticker (cache first, then GitHub Pages).
  */
 export async function getTickerPrices(ticker: string): Promise<TickerPriceData> {
   const cached = await getCache(ticker);
   if (cached) return cached;
 
-  const prices = await fetchFromAPI(ticker);
-  const data: TickerPriceData = {
-    ticker,
-    prices,
-    fetchedAt: new Date().toISOString(),
-  };
+  const data = await fetchFromGitHubPages(ticker);
   await setCache(data);
   return data;
 }
 
 /**
- * Fetch price data for multiple tickers.
+ * Fetch price data for multiple tickers in parallel.
  * Returns a map: ticker → TickerPriceData.
- * Fetches in parallel with rate limiting (max 6 concurrent).
  */
 export async function getMultipleTickerPrices(
   tickers: string[],
 ): Promise<Record<string, TickerPriceData>> {
   const result: Record<string, TickerPriceData> = {};
-  const errors: Record<string, string> = {};
-
-  // Deduplicate
   const unique = [...new Set(tickers)];
 
-  // Fetch in batches of 6 to respect rate limits (8/min)
-  const BATCH_SIZE = 6;
-  for (let i = 0; i < unique.length; i += BATCH_SIZE) {
-    const batch = unique.slice(i, i + BATCH_SIZE);
-    const promises = batch.map(async (ticker) => {
-      try {
-        const data = await getTickerPrices(ticker);
-        result[ticker] = data;
-      } catch (e: any) {
-        errors[ticker] = e.message ?? 'UNKNOWN';
-      }
-    });
-    await Promise.all(promises);
-
-    // Wait 8s between batches if more remain (rate limit: 8/min)
-    if (i + BATCH_SIZE < unique.length) {
-      await new Promise((r) => setTimeout(r, 8000));
+  // GitHub Pages has no rate limit → fetch all in parallel
+  const promises = unique.map(async (ticker) => {
+    try {
+      const data = await getTickerPrices(ticker);
+      result[ticker] = data;
+    } catch {
+      // Skip failed tickers silently
     }
-  }
+  });
+  await Promise.all(promises);
 
   return result;
 }
 
 /**
- * Check if the API key is configured.
+ * Check if price data is available (always true — no API key needed).
  */
 export function isApiKeyConfigured(): boolean {
-  return !!getApiKey();
+  return true;
 }
 
 /**
@@ -154,6 +128,24 @@ export async function clearPriceCache(): Promise<void> {
       await AsyncStorage.multiRemove(priceKeys);
     }
   } catch { /* ignore */ }
+}
+
+/**
+ * Fetch the manifest to check data freshness.
+ */
+export async function fetchManifest(): Promise<{
+  tickers: string[];
+  updatedAt: string;
+  count: number;
+} | null> {
+  try {
+    const url = `${getPriceBaseUrl()}/manifest.json`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
 // ── Momentum helpers (work directly with PricePoint[]) ──
@@ -234,12 +226,12 @@ export function isAboveSMAFromPrices(prices: PricePoint[], months: number): bool
 export interface TickerMomentum {
   ticker: string;
   currentPrice: number | null;
-  r1m: number | null;   // 1-month return
-  r3m: number | null;   // 3-month return
-  r6m: number | null;   // 6-month return
-  r12m: number | null;  // 12-month return
+  r1m: number | null;
+  r3m: number | null;
+  r6m: number | null;
+  r12m: number | null;
   score13612W: number | null;
-  avgMomentum: number | null;  // avg of available lookbacks
+  avgMomentum: number | null;
   sma10m: number | null;
   aboveSMA10m: boolean | null;
 }

@@ -1,201 +1,203 @@
-# ETF 실시간 가격 데이터 API 조사 및 구현 가이드
+# ETF 가격 데이터 아키텍처
 
-> 조사일: 2026-03-28 | 동적 전략 모멘텀 계산용 과거 가격 데이터 확보 방안
-
----
-
-## 1. 요구사항
-
-동적 자산배분 전략(VAA, DAA, Dual Momentum 등)의 모멘텀 스코어 계산에는 최소 **12개월 과거 가격 이력**이 필요합니다.
-
-| 필요 데이터 | 설명 |
-|---|---|
-| 1/3/6/12개월 수익률 | R_1m, R_3m, R_6m, R_12m |
-| 13612W 스코어 | 12×R_1m + 4×R_3m + 2×R_6m + 1×R_12m |
-| SMA (10개월) | 10개월간 종가 평균 |
-| 대상 티커 | US: SPY, EFA, EEM, AGG, TLT, GLD, QQQ 등 (~20종) |
-| | KR: 069500, 360750, 308620 등 (~20종) |
+> 최종 업데이트: 2026-03-28
 
 ---
 
-## 2. API 비교 분석
+## 1. 아키텍처 개요
 
-### Twelve Data (선택됨)
-
-| 항목 | 내용 |
-|---|---|
-| URL | `https://api.twelvedata.com/time_series` |
-| 무료 한도 | **800회/일, 8회/분** |
-| CORS | **지원** (`access-control-allow-origin: *`) — 웹에서 직접 호출 가능 |
-| API 키 | 필요 (무료 가입, 즉시 발급: twelvedata.com) |
-| 한국 ETF | **지원** (KRX 거래소, 티커: `069500`, `360750` 등) |
-| 미국 ETF | **지원** (SPY, EFA, AGG 등 전체) |
-| 데이터 깊이 | 10년+ |
-| 인터벌 | 1day, 1week, 1month, 분봉 |
-
-**예시 요청:**
 ```
-GET https://api.twelvedata.com/time_series?symbol=SPY&interval=1week&outputsize=52&apikey=YOUR_KEY
+┌─────────────────┐     cron (매일)     ┌──────────────┐
+│  Twelve Data API │ ◄──────────────── │ GitHub Actions │
+│  (가격 데이터)    │                    │ (fetch-prices) │
+└─────────────────┘                    └──────┬───────┘
+                                              │ JSON 파일
+                                              ▼
+                                    ┌──────────────────┐
+                                    │   GitHub Pages    │
+                                    │  (gh-pages 브랜치) │
+                                    │  /prices/SPY.json │
+                                    └──────┬───────────┘
+                                           │ HTTP GET
+                              ┌────────────┼────────────┐
+                              ▼            ▼            ▼
+                          [웹 앱]     [iOS 앱]    [Android 앱]
 ```
 
-**응답 포맷:**
-```json
-{
-  "meta": { "symbol": "SPY", "interval": "1week" },
-  "values": [
-    { "datetime": "2026-03-27", "close": "522.50", "open": "520", "high": "525", "low": "515", "volume": "..." },
-    ...
-  ]
-}
-```
-- values는 최신순 정렬 (newest first)
-- close는 문자열 → parseFloat 필요
-
-### Yahoo Finance (비공식)
-
-| 항목 | 내용 |
-|---|---|
-| URL | `https://query1.finance.yahoo.com/v8/finance/chart/SPY?range=1y&interval=1wk` |
-| 무료 한도 | 비공식, 레이트 리밋 있음 |
-| CORS | **미지원** — 서버 프록시 필요 |
-| API 키 | 불필요 |
-| 한국 ETF | 지원 (`069500.KS` 형식) |
-| 안정성 | 비공식 API, 언제든 변경/차단 가능 |
-
-### Alpha Vantage
-
-| 항목 | 내용 |
-|---|---|
-| URL | `https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY&symbol=SPY&apikey=KEY` |
-| 무료 한도 | **25회/일** — 매우 적음 |
-| CORS | **미지원** |
-| 한국 ETF | 미지원 (추정) |
-| 결론 | 한도 부족, CORS 미지원 → 부적합 |
-
-### Finnhub
-
-| 항목 | 내용 |
-|---|---|
-| URL | `https://finnhub.io/api/v1/stock/candle?symbol=SPY&resolution=W&from=...&to=...&token=KEY` |
-| 무료 한도 | **60회/분** (일 한도 없음) |
-| CORS | **지원** |
-| 한국 ETF | 미확인 |
-| 결론 | CORS OK, 관대한 한도, 한국 ETF 미지원 가능 |
-
-### Financial Modeling Prep
-
-| 항목 | 내용 |
-|---|---|
-| 무료 한도 | 250회/일 |
-| CORS | 미확인 |
-| 한국 ETF | 미확인 |
-| 결론 | 보조 옵션 |
-
-### KRX Open API (한국거래소 공식)
-
-| 항목 | 내용 |
-|---|---|
-| URL | https://openapi.krx.co.kr/ |
-| 가입 | 승인 필요 (최대 1일) |
-| 데이터 | 한국 주식/ETF 공식 데이터 |
-| 결론 | 한국 ETF 전용 보조 소스 |
+**핵심 원칙:**
+- 앱에서 직접 API 호출하지 않음 (API 키 노출 방지)
+- GitHub Actions가 매일 데이터 수집 → GitHub Pages로 정적 호스팅
+- 앱은 GitHub Pages에서 JSON 파일만 HTTP GET
 
 ---
 
-## 3. 선택: Twelve Data
+## 2. 설정 방법 (Step by Step)
 
-**이유:**
-1. CORS 지원 → 웹에서 프록시 없이 직접 호출
-2. 한국 + 미국 ETF 모두 지원 → 단일 API로 통합
-3. 무료 800회/일 → ~20개 전략 × ~15 티커 = 300회/세션, 하루 2-3회 충분
-4. 즉시 사용 가능 (가입 후 바로 키 발급)
-
-**레이트 리밋 대응:**
-- AsyncStorage에 24시간 TTL 캐시
-- 6개씩 병렬 fetch + 8초 간격 (8/min 제한)
-- 사용자가 명시적으로 새로고침할 때만 재fetch
-
----
-
-## 4. 구현 상세
-
-### 파일 구조
-
-```
-src/services/priceService.ts     ← API 호출 + 캐시 + 모멘텀 계산
-src/hooks/usePriceData.ts        ← React hook (fetch + state 관리)
-src/ui/screens/strategy/FormulaExplainer.tsx  ← UI에서 실시간 값 표시
-```
-
-### 설정 방법
+### Step 1: Twelve Data API 키 발급
 
 1. https://twelvedata.com 가입 (무료)
-2. API Key 복사
-3. `.env` 파일에 추가:
-   ```
-   EXPO_PUBLIC_TWELVE_DATA_API_KEY=your_api_key_here
-   ```
-4. 앱 재시작 → 전략 상세 화면에서 자동으로 데이터 로드
+2. Dashboard → API Keys에서 키 복사
 
-### 모멘텀 계산 방식
+### Step 2: GitHub Secrets 설정
 
-주간 종가 데이터 52주분을 받아서:
+1. GitHub 리포지토리 → Settings → Secrets and variables → Actions
+2. **New repository secret** 클릭
+3. Name: `TWELVE_DATA_API_KEY`
+4. Value: Step 1에서 복사한 API 키
+5. **Add secret** 클릭
+
+### Step 3: GitHub Pages 활성화
+
+1. GitHub 리포지토리 → Settings → Pages
+2. Source: **Deploy from a branch**
+3. Branch: `gh-pages` / `/ (root)`
+4. **Save** 클릭
+
+### Step 4: 첫 실행 (수동)
+
+1. GitHub 리포지토리 → Actions 탭
+2. 왼쪽에서 **"Update ETF Prices"** 워크플로우 선택
+3. **Run workflow** → **Run workflow** 클릭
+4. 약 5~10분 후 완료
+5. 확인: `https://{username}.github.io/{repo}/prices/manifest.json` 접속
+
+### Step 5: 자동 실행 확인
+
+- 워크플로우는 **매일 UTC 22:00 (한국시간 오전 7시)** 에 자동 실행
+- 월~금만 실행 (주말 미국 장 휴장)
+- Actions 탭에서 실행 이력 확인 가능
+
+---
+
+## 3. 파일 구조
+
+### GitHub Actions 워크플로우
 
 ```
-R_Nm = (현재 종가 - N개월전 종가) / N개월전 종가
-     = (prices[latest] - prices[latest - N*4]) / prices[latest - N*4]
-
-13612W = 12 × R_1m + 4 × R_3m + 2 × R_6m + 1 × R_12m
-
-SMA_10m = mean(최근 40주 종가)
+.github/workflows/update-prices.yml
 ```
 
-### 캐시 전략
+- **트리거**: cron (월~금 UTC 22:00) + 수동 (workflow_dispatch)
+- **동작**: `scripts/fetch-prices.mjs` 실행 → `gh-pages` 브랜치에 배포
 
-| 키 형식 | TTL | 내용 |
-|---|---|---|
-| `@allocate:prices:SPY` | 24시간 | 52주 주간 종가 + fetchedAt |
-| `@allocate:prices:069500` | 24시간 | 한국 ETF 동일 |
+### 데이터 수집 스크립트
 
-### 한국 ETF 티커 매핑
+```
+scripts/fetch-prices.mjs
+```
 
-Twelve Data에서 한국 ETF는 숫자 티커 그대로 사용:
+- Twelve Data API에서 52주 주간 종가 데이터 fetch
+- US ETF 21종 + KR ETF 31종 = 총 52종
+- 6개씩 병렬 처리, 배치 간 12초 대기 (8 req/min 제한)
+- 출력: `data/prices/{TICKER}.json` + `data/prices/manifest.json`
 
-| 앱 내 티커 | Twelve Data 티커 |
+### 출력 JSON 형식
+
+```json
+// data/prices/SPY.json
+{
+  "ticker": "SPY",
+  "prices": [
+    { "date": "2025-04-04", "close": 485.12 },
+    { "date": "2025-04-11", "close": 490.35 },
+    ...
+    { "date": "2026-03-27", "close": 522.50 }
+  ],
+  "fetchedAt": "2026-03-28T22:05:00.000Z"
+}
+```
+
+- `prices`: 오래된 순 → 최신순 (oldest first)
+- 약 60개 데이터 포인트 (60주)
+
+### 매니페스트
+
+```json
+// data/prices/manifest.json
+{
+  "tickers": ["SPY", "EFA", "EEM", ...],
+  "updatedAt": "2026-03-28T22:05:00.000Z",
+  "count": 48,
+  "failed": [{ "ticker": "XXX", "error": "..." }]
+}
+```
+
+---
+
+## 4. 앱에서의 데이터 사용
+
+### priceService.ts
+
+```typescript
+// GitHub Pages에서 가격 데이터 fetch
+const url = 'https://teikyungkim.github.io/Allocate/prices/SPY.json';
+
+// 앱 내 6시간 캐시 (AsyncStorage)
+// GitHub Pages 데이터는 매일 갱신되므로 6시간 TTL 충분
+```
+
+### 커스텀 URL 설정 (선택)
+
+`.env` 파일에서 데이터 URL 오버라이드 가능:
+```
+EXPO_PUBLIC_PRICE_DATA_URL=https://custom-domain.com/prices
+```
+
+---
+
+## 5. 비용
+
+| 항목 | 비용 |
 |---|---|
-| 360750 | 360750 |
-| 069500 | 069500 |
-| 308620 | 308620 |
+| Twelve Data API | 무료 (800 req/일) |
+| GitHub Actions | 무료 (public 무제한, private 2000분/월) |
+| GitHub Pages | 무료 (100GB 대역폭/월) |
+| **합계** | **$0** |
 
 ---
 
-## 5. 제한사항 및 향후 개선
+## 6. 대상 티커 목록
 
-### 현재 제한
+### 미국 ETF (21종)
+SPY, VOO, IVV, EFA, EEM, TLT, AGG, BND, IEF, SHY, GLD, IAU, DBC, VNQ, QQQ, VTV, VBR, BIL, SCHD, HYG, LQD
 
-1. **무료 한도 800회/일**: 개인 사용에는 충분하나 다수 사용자 시 서버 프록시 + 캐시 서버 필요
-2. **주간 데이터**: 월간 수익률 계산 시 ±1주 오차 가능 (주간 4주 = 28일 ≈ 1개월)
-3. **실시간 아님**: 최신 데이터는 전일 또는 전주 종가
-
-### 향후 개선 방향
-
-1. **서버 프록시 도입**: Firebase Functions 또는 Vercel Edge Functions로 API 호출 중앙화
-2. **일간 데이터**: 정밀 계산을 위해 `interval=1day&outputsize=252` 사용 (API 크레딧 동일)
-3. **자동 리밸런싱 알림**: 모멘텀 변화 감지 시 푸시 알림
-4. **Yahoo Finance 폴백**: Twelve Data 장애 시 Yahoo Finance (native만) 자동 전환
+### 한국 ETF (31종, 중복 제거)
+360750, 379800, 195930, 195980, 304660, 451540, 308620, 305080, 153130, 214330, 132030, 411060, 261220, 352560, 133690, 429760, 458730, 381180, 161510, 251350, 289040, 453850, 453810, 182490, 272580, 352540, 379810, 459580, 261060, 278530, 069500
 
 ---
 
-## 6. Google Sheets 방식 참고
+## 7. 트러블슈팅
 
-사용자가 제시한 Google Sheets 공식:
-```
-=GoogleFinance(C12, "close", TODAY()-450, TODAY(), "weekly")
-```
+### GitHub Actions 실패 시
 
-이는 Google Finance의 과거 가격 데이터를 주간 단위로 가져오는 방식입니다.
-- `TODAY()-450`: 약 15개월 전부터
-- `"weekly"`: 주간 종가
-- 인덱스 접근으로 특정 시점 가격 비교
+1. Actions 탭에서 실패한 run 클릭
+2. 로그에서 에러 확인
+3. 흔한 원인:
+   - `TWELVE_DATA_API_KEY` secret 미설정
+   - API 키 만료/무효
+   - Twelve Data 서버 일시 장애
 
-Twelve Data API가 동일한 역할을 하며, 앱 내에서 프로그래밍적으로 접근 가능합니다.
+### 데이터가 앱에 표시되지 않을 때
+
+1. `https://{username}.github.io/{repo}/prices/manifest.json` 접속 확인
+2. 404 → GitHub Pages 미활성화 또는 gh-pages 브랜치 없음
+3. JSON 정상 → 앱의 캐시 문제 → AsyncStorage 초기화
+
+### 특정 티커 데이터 없음
+
+- Twelve Data에서 해당 티커 미지원 가능
+- `manifest.json`의 `failed` 배열 확인
+- 한국 ETF는 티커 형식이 숫자만 (예: `069500`, 앞의 0 포함)
+
+---
+
+## 8. 이전 방식과 비교
+
+| 항목 | 이전 (앱 → API 직접) | 현재 (GitHub Pages) |
+|---|---|---|
+| API 키 위치 | 앱 .env (노출 위험) | GitHub Secrets (안전) |
+| CORS | 문제 없음 | 문제 없음 |
+| 레이트 리밋 | 사용자별 800/일 | 서버 1회/일 (무제한 사용자) |
+| 오프라인 | 캐시 의존 | 캐시 의존 (동일) |
+| 비용 | 무료 | 무료 |
+| 데이터 신선도 | 실시간 | 매일 갱신 (충분) |

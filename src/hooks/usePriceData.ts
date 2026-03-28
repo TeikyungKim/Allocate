@@ -1,14 +1,12 @@
 /**
  * React hook for fetching and caching historical price data.
- * Provides momentum calculations for strategy formula display.
+ * Data is served from GitHub Pages (updated daily by GitHub Actions).
  */
 import { useState, useEffect, useCallback } from 'react';
 import {
   getMultipleTickerPrices,
-  isApiKeyConfigured,
   calcTickerMomentum,
   TickerMomentum,
-  TickerPriceData,
 } from '../services/priceService';
 
 export interface PriceDataState {
@@ -18,8 +16,6 @@ export interface PriceDataState {
   loading: boolean;
   /** Error message if fetch failed */
   error: string | null;
-  /** Is the API key configured? */
-  apiKeyConfigured: boolean;
   /** Last fetched timestamp */
   lastFetchedAt: string | null;
   /** Refresh data (clear cache and re-fetch) */
@@ -29,8 +25,6 @@ export interface PriceDataState {
 /**
  * Hook to fetch price data for a list of tickers.
  * Computes momentum scores automatically.
- *
- * @param tickers - Array of ticker symbols to fetch (e.g., ['SPY', 'EFA', 'AGG'])
  */
 export function usePriceData(tickers: string[]): PriceDataState {
   const [momentum, setMomentum] = useState<Record<string, TickerMomentum>>({});
@@ -39,11 +33,10 @@ export function usePriceData(tickers: string[]): PriceDataState {
   const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const apiKeyConfigured = isApiKeyConfigured();
   const tickerKey = tickers.sort().join(',');
 
   const fetchData = useCallback(async () => {
-    if (!apiKeyConfigured || tickers.length === 0) return;
+    if (tickers.length === 0) return;
 
     setLoading(true);
     setError(null);
@@ -58,13 +51,15 @@ export function usePriceData(tickers: string[]): PriceDataState {
       }
 
       setMomentum(momentumMap);
-      setLastFetchedAt(new Date().toISOString());
+      if (Object.keys(momentumMap).length > 0) {
+        setLastFetchedAt(new Date().toISOString());
+      }
     } catch (e: any) {
       setError(e.message ?? '데이터를 가져올 수 없습니다');
     } finally {
       setLoading(false);
     }
-  }, [tickerKey, apiKeyConfigured, refreshKey]);
+  }, [tickerKey, refreshKey]);
 
   useEffect(() => {
     fetchData();
@@ -78,7 +73,6 @@ export function usePriceData(tickers: string[]): PriceDataState {
     momentum,
     loading,
     error,
-    apiKeyConfigured,
     lastFetchedAt,
     refresh,
   };

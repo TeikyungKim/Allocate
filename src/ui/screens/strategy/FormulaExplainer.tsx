@@ -404,22 +404,21 @@ export function FormulaExplainer({ strategy, etfMap }: Props) {
           {priceData.loading && (
             <ActivityIndicator size="small" color={theme.primary} />
           )}
-          {!priceData.loading && priceData.apiKeyConfigured && (
+          {!priceData.loading && (
             <Pressable onPress={priceData.refresh} style={[s.refreshBtn, { backgroundColor: theme.surfaceVariant }]}>
               <Text style={[typography.small, { color: theme.primary }]}>새로고침</Text>
             </Pressable>
           )}
         </View>
 
-        {/* API 키 미설정 안내 */}
-        {!priceData.apiKeyConfigured && (
+        {/* 데이터 소스 안내 */}
+        {!priceData.loading && Object.keys(priceData.momentum).length === 0 && !priceData.error && (
           <View style={[s.noteBox, { backgroundColor: theme.warningLight ?? theme.surfaceVariant, marginBottom: 10 }]}>
             <Text style={[typography.small, { color: theme.warning, fontWeight: '600' }]}>
-              실시간 데이터를 보려면 Twelve Data API 키가 필요합니다
+              가격 데이터가 아직 준비되지 않았습니다
             </Text>
             <Text style={[typography.small, { color: theme.textSecondary, marginTop: 4, lineHeight: 18 }]}>
-              .env 파일에 EXPO_PUBLIC_TWELVE_DATA_API_KEY를 설정하세요.{'\n'}
-              무료: twelvedata.com 가입 → 800회/일
+              GitHub Actions로 데이터가 업데이트되면 자동으로 표시됩니다.
             </Text>
           </View>
         )}
@@ -575,18 +574,10 @@ export function FormulaExplainer({ strategy, etfMap }: Props) {
               )}
 
               {/* 데이터 없음 */}
-              {!hasData && row.ticker !== '-' && priceData.apiKeyConfigured && !priceData.loading && (
+              {!hasData && row.ticker !== '-' && !priceData.loading && (
                 <View style={[s.momentumSection, { borderTopColor: theme.border }]}>
                   <Text style={[typography.small, { color: theme.textTertiary, fontStyle: 'italic' }]}>
-                    데이터를 가져올 수 없습니다
-                  </Text>
-                </View>
-              )}
-
-              {!hasData && !priceData.apiKeyConfigured && (
-                <View style={[s.momentumSection, { borderTopColor: theme.border }]}>
-                  <Text style={[typography.small, { color: theme.textTertiary, fontStyle: 'italic' }]}>
-                    API 키 설정 후 실시간 스코어가 표시됩니다
+                    가격 데이터 대기 중
                   </Text>
                 </View>
               )}
