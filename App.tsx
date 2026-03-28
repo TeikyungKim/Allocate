@@ -1,20 +1,34 @@
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { PortfolioProvider } from './src/contexts/PortfolioContext';
+import { RootNavigator } from './src/ui/navigation/RootNavigator';
+import { initAds } from './src/services/adService';
 
-export default function App() {
+function AppContent() {
+  const { isDark } = useTheme();
+
+  useEffect(() => {
+    initAds();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <RootNavigator />
+    </>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <PortfolioProvider>
+          <AppContent />
+        </PortfolioProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
+  );
+}
