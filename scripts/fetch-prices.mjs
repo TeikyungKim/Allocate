@@ -39,8 +39,8 @@ const KR_TICKERS = [
 // Deduplicate
 const ALL_TICKERS = [...new Set([...US_TICKERS, ...KR_TICKERS])];
 
-const BATCH_SIZE = 6;
-const BATCH_DELAY_MS = 12000; // 12s between batches (8 req/min limit)
+const BATCH_SIZE = 7;
+const BATCH_DELAY_MS = 62000; // 62s between batches — wait full minute for rate limit reset (8 req/min)
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
