@@ -1,153 +1,28 @@
 {
   "tickers": [
-    "EEM",
+    "TLT",
     "EFA",
     "SPY",
     "AGG",
-    "VOO",
-    "TLT",
+    "EEM",
     "IVV",
-    "IEF",
+    "VOO",
     "SHY",
-    "DBC",
     "BND",
     "IAU",
+    "IEF",
     "GLD",
     "VNQ",
+    "DBC",
     "QQQ",
-    "LQD",
     "BIL",
+    "LQD",
     "HYG",
     "VTV",
     "SCHD",
     "VBR"
   ],
-  "updatedAt": "2026-03-28T14:45:09.328Z",
+  "updatedAt": "2026-03-28T22:48:29.874Z",
   "count": 21,
-  "failed": [
-    {
-      "ticker": "360750",
-      "error": "API error for 360750: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "308620",
-      "error": "API error for 308620: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "451540",
-      "error": "API error for 451540: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "195930",
-      "error": "API error for 195930: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "195980",
-      "error": "API error for 195980: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "304660",
-      "error": "API error for 304660: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "379800",
-      "error": "API error for 379800: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "153130",
-      "error": "API error for 153130: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "261220",
-      "error": "API error for 261220: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "411060",
-      "error": "API error for 411060: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "214330",
-      "error": "API error for 214330: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "352560",
-      "error": "API error for 352560: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "305080",
-      "error": "API error for 305080: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "132030",
-      "error": "API error for 132030: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "429760",
-      "error": "API error for 429760: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "133690",
-      "error": "API error for 133690: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "458730",
-      "error": "API error for 458730: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "289040",
-      "error": "API error for 289040: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "381180",
-      "error": "API error for 381180: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "161510",
-      "error": "API error for 161510: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "251350",
-      "error": "API error for 251350: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "453810",
-      "error": "API error for 453810: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "453850",
-      "error": "API error for 453850: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "379810",
-      "error": "API error for 379810: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "352540",
-      "error": "API error for 352540: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "182490",
-      "error": "API error for 182490: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "459580",
-      "error": "API error for 459580: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "272580",
-      "error": "API error for 272580: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "069500",
-      "error": "API error for 069500: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "278530",
-      "error": "API error for 278530: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "261060",
-      "error": "API error for 261060: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    }
-  ]
+  "failed": []
 }
