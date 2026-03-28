@@ -9,10 +9,11 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { typography } from '../../../theme';
 import { usePortfolio, HoldingEntry } from '../../../contexts/PortfolioContext';
 import { formatCurrency, formatWeight } from '../../../utils/format';
-import { strategies } from '../../../data/strategies';
+import { strategies, Strategy } from '../../../data/strategies';
 import { getETFUniverse, getCustomETFUniverse } from '../../../data/etfs';
 import { calculateAllocation } from '../../../core/engine/allocationEngine';
 import { PortfolioStackParamList } from '../../navigation/types';
+import { useDynamicStrategy } from '../../../hooks/useDynamicStrategy';
 
 type Route = RouteProp<PortfolioStackParamList, 'PortfolioDetail'>;
 
@@ -32,6 +33,24 @@ export function PortfolioDetailScreen() {
   const [editingTolerance, setEditingTolerance] = useState(false);
   const [toleranceText, setToleranceText] = useState('');
 
+  // 동적 전략: 실시간 모멘텀 기반 재계산
+  const baseStrategy = useMemo(() => {
+    return strategies.find((s) => s.id === portfolio?.strategyId) ?? null;
+  }, [portfolio?.strategyId]);
+
+  const { effectiveStrategy, isDynamic } = useDynamicStrategy(
+    baseStrategy ?? { id: '', name: '', type: 'static', description: '', defaultAllocations: [] },
+  );
+
+  // 실시간 동적 배분 적용된 allocations
+  const liveAllocations = useMemo(() => {
+    if (!portfolio || !isDynamic || !baseStrategy) return null;
+    const etfMap = portfolio.etfOverrides
+      ? getCustomETFUniverse(portfolio.universe, portfolio.etfOverrides)
+      : getETFUniverse(portfolio.universe);
+    return calculateAllocation(effectiveStrategy, etfMap, portfolio.investmentAmount, portfolio.universe);
+  }, [portfolio, isDynamic, effectiveStrategy, baseStrategy]);
+
   if (!portfolio) {
     return (
       <ScreenWrapper>
@@ -40,10 +59,11 @@ export function PortfolioDetailScreen() {
     );
   }
 
+  const displayAllocations = liveAllocations?.allocations ?? portfolio.allocations;
   const holdings = portfolio.holdings ?? [];
   const tolerance = portfolio.tolerancePercent ?? 5;
 
-  const pieData = portfolio.allocations.map((a, i) => ({
+  const pieData = displayAllocations.map((a, i) => ({
     name: a.name,
     weight: a.weight,
     color: theme.chart[i % theme.chart.length],
@@ -51,7 +71,7 @@ export function PortfolioDetailScreen() {
     legendFontSize: 11,
   }));
 
-  // 보유량 vs 추천량 괴리 계산
+  // 보유량 vs 추천량 괴리 계산 (실시간 배분 기준)
   const getDeviation = (ticker: string, recommendedShares: number): number | null => {
     const holding = holdings.find((h) => h.ticker === ticker);
     if (!holding) return null;
@@ -87,7 +107,7 @@ export function PortfolioDetailScreen() {
 
   // 보유수량 저장
   const handleHoldingsSave = async () => {
-    const newHoldings: HoldingEntry[] = portfolio.allocations
+    const newHoldings: HoldingEntry[] = displayAllocations
       .map((a) => ({
         ticker: a.ticker,
         shares: parseInt(holdingsMap[a.ticker] ?? '0', 10) || 0,
@@ -129,7 +149,14 @@ export function PortfolioDetailScreen() {
   return (
     <ScreenWrapper>
       <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1 }}>
-        <Text style={[typography.h2, { color: theme.text, marginTop: 8 }]}>{portfolio.name}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          <Text style={[typography.h2, { color: theme.text }]}>{portfolio.name}</Text>
+          {isDynamic && (
+            <View style={{ backgroundColor: theme.primaryLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+              <Text style={{ color: theme.primary, fontSize: 10, fontWeight: '700' }}>실시간</Text>
+            </View>
+          )}
+        </View>
         <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 4 }]}>
           {new Date(portfolio.createdAt).toLocaleDateString('ko-KR')}
           {portfolio.updatedAt && ` (수정: ${new Date(portfolio.updatedAt).toLocaleDateString('ko-KR')})`}
@@ -213,7 +240,7 @@ export function PortfolioDetailScreen() {
               onPress={() => {
                 if (!editingHoldings) {
                   const map: Record<string, string> = {};
-                  for (const a of portfolio.allocations) {
+                  for (const a of displayAllocations) {
                     const h = holdings.find((x) => x.ticker === a.ticker);
                     map[a.ticker] = h ? h.shares.toString() : '0';
                   }
@@ -229,7 +256,7 @@ export function PortfolioDetailScreen() {
           </View>
           {editingHoldings && (
             <View style={{ marginTop: 8 }}>
-              {portfolio.allocations.map((a) => (
+              {displayAllocations.map((a) => (
                 <View key={a.ticker} style={styles.holdingRow}>
                   <Text style={[typography.body, { color: theme.text, flex: 1 }]}>{a.name}</Text>
                   <TextInput
@@ -247,7 +274,7 @@ export function PortfolioDetailScreen() {
         </Card>
 
         {/* 종목별 상세 */}
-        {portfolio.allocations.map((a) => {
+        {displayAllocations.map((a) => {
           const holdingShares = getHoldingShares(a.ticker);
           const deviation = getDeviation(a.ticker, a.shares);
           const isOverTolerance = deviation !== null && Math.abs(deviation) > tolerance;

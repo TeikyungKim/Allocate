@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,12 +6,14 @@ import { PieChart } from 'react-native-chart-kit';
 import { ScreenWrapper, Card, Button, Badge } from '../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { typography } from '../../../theme';
-import { strategies, Strategy } from '../../../data/strategies';
+import { strategies, Strategy, StrategyAllocation } from '../../../data/strategies';
 import { usePortfolio } from '../../../contexts/PortfolioContext';
 import { getETFUniverse } from '../../../data/etfs';
 import { formatWeight } from '../../../utils/format';
 import { StrategyStackParamList } from '../../navigation/types';
 import { FormulaExplainer } from './FormulaExplainer';
+import { computeDynamicAllocation } from '../../../core/engine/dynamicAllocator';
+import { TickerMomentum } from '../../../services/priceService';
 
 type Route = RouteProp<StrategyStackParamList, 'StrategyDetail'>;
 type Universe = 'korea' | 'retirement' | 'us';
@@ -28,6 +30,7 @@ export function StrategyDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<StrategyStackParamList>>();
   const { customStrategies } = usePortfolio();
   const [universe, setUniverse] = useState<Universe>('us');
+  const [momentumData, setMomentumData] = useState<Record<string, TickerMomentum>>({});
 
   // 빌트인 전략 또는 커스텀 전략 검색
   const strategy: Strategy | undefined = useMemo(() => {
@@ -54,17 +57,32 @@ export function StrategyDetailScreen() {
     );
   }
 
+  const dc = strategy.dynamicConfig;
+  const etfMap = getETFUniverse(universe);
+
+  const handleMomentumLoaded = useCallback((m: Record<string, TickerMomentum>) => {
+    setMomentumData(m);
+  }, []);
+
+  // Compute dynamic allocation from real data, fallback to default
+  const activeAllocations: StrategyAllocation[] = useMemo(() => {
+    if (dc && Object.keys(momentumData).length > 0) {
+      const computed = computeDynamicAllocation(strategy, momentumData);
+      if (computed) return computed;
+    }
+    return strategy.defaultAllocations;
+  }, [strategy, dc, momentumData]);
+
+  const isDynamic = !!dc && activeAllocations !== strategy.defaultAllocations;
+
   const chartColors = theme.chart;
-  const pieData = strategy.defaultAllocations.map((a, i) => ({
+  const pieData = activeAllocations.map((a, i) => ({
     name: a.assetClass,
     weight: a.weight,
     color: chartColors[i % chartColors.length],
     legendFontColor: theme.textSecondary,
     legendFontSize: 12,
   }));
-
-  const dc = strategy.dynamicConfig;
-  const etfMap = getETFUniverse(universe);
 
   // 전략에서 사용하는 모든 자산군 수집
   const allAssetClasses = useMemo(() => {
@@ -170,7 +188,7 @@ export function StrategyDetailScreen() {
       )}
 
       {/* 동적 전략: 공식 상세 (모멘텀 정의 + 자산별 현재값 + 판단 규칙) */}
-      <FormulaExplainer strategy={strategy} etfMap={etfMap} />
+      <FormulaExplainer strategy={strategy} etfMap={etfMap} onMomentumLoaded={handleMomentumLoaded} />
 
       {/* 정적 전략: 자산별 ETF 현재가 */}
       {!dc && (
@@ -222,7 +240,14 @@ export function StrategyDetailScreen() {
       )}
 
       <Card style={{ marginTop: 4 }}>
-        <Text style={[typography.h3, { color: theme.text, marginBottom: 12 }]}>기본 자산 배분</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <Text style={[typography.h3, { color: theme.text }]}>자산 배분</Text>
+          {isDynamic && (
+            <View style={{ backgroundColor: theme.primaryLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+              <Text style={{ color: theme.primary, fontSize: 10, fontWeight: '700' }}>실시간 계산</Text>
+            </View>
+          )}
+        </View>
         <PieChart
           data={pieData}
           width={Dimensions.get('window').width - 64}
@@ -239,12 +264,12 @@ export function StrategyDetailScreen() {
       </Card>
 
       <Card style={{ marginTop: 4 }}>
-        {strategy.defaultAllocations.map((a, i) => (
+        {activeAllocations.map((a, i) => (
           <View
             key={a.assetClass}
             style={[
               styles.allocationRow,
-              i < strategy.defaultAllocations.length - 1 && {
+              i < activeAllocations.length - 1 && {
                 borderBottomWidth: 1,
                 borderBottomColor: theme.border,
               },

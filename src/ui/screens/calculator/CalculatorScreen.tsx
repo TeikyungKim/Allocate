@@ -14,6 +14,7 @@ import { formatCurrency, formatWeight, generateId } from '../../../utils/format'
 import { usePortfolio, SavedPortfolio, CustomStrategy } from '../../../contexts/PortfolioContext';
 import { showInterstitialAd } from '../../../services/adService';
 import { CalculatorStackParamList } from '../../navigation/types';
+import { useDynamicStrategy } from '../../../hooks/useDynamicStrategy';
 
 type Universe = 'korea' | 'retirement' | 'us';
 type Route = RouteProp<CalculatorStackParamList, 'Calculator'>;
@@ -68,7 +69,8 @@ export function CalculatorScreen() {
     }
   }, [route.params?.strategyId, allStrategies]);
 
-  const strategy = allStrategies.find((s) => s.id === selectedStrategyId) ?? allStrategies[0];
+  const baseStrategy = allStrategies.find((s) => s.id === selectedStrategyId) ?? allStrategies[0];
+  const { effectiveStrategy: strategy, isDynamic, loading: dynamicLoading } = useDynamicStrategy(baseStrategy);
   const amount = parseFloat(amountText.replace(/,/g, '')) || 0;
   const presets = universe === 'us' ? PRESET_AMOUNTS_US : PRESET_AMOUNTS_KR;
 
@@ -162,7 +164,7 @@ export function CalculatorScreen() {
           <View style={{ flex: 1 }}>
             <Text style={[typography.bodyBold, { color: theme.text }]}>{strategy.name}</Text>
             <Text style={[typography.small, { color: theme.textSecondary }]} numberOfLines={1}>
-              {customStrategies.some((cs) => cs.id === strategy.id) ? '커스텀' : strategy.type === 'static' ? '정적' : '동적'}{strategy.riskLevel ? ` · ${strategy.riskLevel}` : ''}
+              {customStrategies.some((cs) => cs.id === strategy.id) ? '커스텀' : strategy.type === 'static' ? '정적' : '동적'}{strategy.riskLevel ? ` · ${strategy.riskLevel}` : ''}{isDynamic ? ' · 실시간 적용' : ''}
             </Text>
           </View>
           <Text style={{ color: theme.textSecondary, fontSize: 18 }}>{'▾'}</Text>

@@ -22,22 +22,13 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-// All tickers across three universes
-const US_TICKERS = [
+// US ETF tickers only — Korean ETFs track the same underlying assets,
+// so we use US ETF momentum data for all three universes (KR, retirement, US).
+// Korean tickers require Twelve Data Pro plan ($29/mo) and are excluded.
+const ALL_TICKERS = [
   'SPY', 'VOO', 'IVV', 'EFA', 'EEM', 'TLT', 'AGG', 'BND', 'IEF', 'SHY',
   'GLD', 'IAU', 'DBC', 'VNQ', 'QQQ', 'VTV', 'VBR', 'BIL', 'SCHD', 'HYG', 'LQD',
 ];
-
-const KR_TICKERS = [
-  '360750', '379800', '195930', '195980', '304660', '451540', '308620',
-  '305080', '153130', '214330', '132030', '411060', '261220', '352560',
-  '133690', '429760', '458730', '381180', '161510',
-  '251350', '289040', '453850', '453810', '182490', '272580',
-  '352540', '379810', '459580', '261060', '278530', '069500',
-];
-
-// Deduplicate
-const ALL_TICKERS = [...new Set([...US_TICKERS, ...KR_TICKERS])];
 
 const BATCH_SIZE = 7;
 const BATCH_DELAY_MS = 62000; // 62s between batches — wait full minute for rate limit reset (8 req/min)

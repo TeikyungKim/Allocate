@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { Card } from '../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -11,6 +11,7 @@ import { TickerMomentum } from '../../../services/priceService';
 interface Props {
   strategy: Strategy;
   etfMap: ETFUniverse;
+  onMomentumLoaded?: (momentum: Record<string, TickerMomentum>) => void;
 }
 
 // ── 스코어 유형별 정의 ──────────────────────────────────
@@ -236,17 +237,40 @@ function getDecisionRules(method: string): string[] {
   }
 }
 
+// ── 자산군 → 미국 기준 티커 매핑 ───────────────────────
+// 한국/퇴직연금 ETF는 동일 기초자산을 추종하므로 미국 ETF 모멘텀 데이터를 공유
+export const ASSET_CLASS_TO_US_TICKER: Record<string, string> = {
+  '미국주식': 'SPY',
+  '선진국주식': 'EFA',
+  '신흥국주식': 'EEM',
+  '미국채권': 'AGG',
+  '장기채': 'TLT',
+  '중기채': 'IEF',
+  '단기채': 'SHY',
+  '금': 'GLD',
+  '원자재': 'DBC',
+  '리츠': 'VNQ',
+  '나스닥': 'QQQ',
+  '소형가치주': 'VBR',
+  '현금': 'BIL',
+  '미국배당': 'SCHD',
+  '미국가치': 'VTV',
+  '하이일드': 'HYG',
+  '투자등급채': 'LQD',
+};
+
 // ── 자산 행 구조 ─────────────────────────────────────
 
 interface AssetRow {
   assetClass: string;
   role: 'canary' | 'offensive' | 'defensive' | 'allocation';
   roleLabel: string;
-  ticker: string;
+  ticker: string;         // 선택된 유니버스의 실제 ETF 티커
   name: string;
   price: number;
   currency: string;
   available: boolean;
+  usTicker: string;       // 모멘텀 데이터 조회용 미국 기준 티커
 }
 
 function buildAssetRows(strategy: Strategy, etfMap: ETFUniverse): AssetRow[] {
@@ -271,6 +295,7 @@ function buildAssetRows(strategy: Strategy, etfMap: ETFUniverse): AssetRow[] {
         price: etf?.price ?? 0,
         currency: etf?.currency ?? 'USD',
         available: !!etf,
+        usTicker: ASSET_CLASS_TO_US_TICKER[ac] ?? '-',
       });
     }
   }
@@ -314,7 +339,7 @@ function getPrimaryScore(m: TickerMomentum, scoreType: ScoreType): number | null
 
 // ── 메인 컴포넌트 ────────────────────────────────────
 
-export function FormulaExplainer({ strategy, etfMap }: Props) {
+export function FormulaExplainer({ strategy, etfMap, onMomentumLoaded }: Props) {
   const { theme } = useTheme();
   const dc = strategy.dynamicConfig;
   if (!dc) return null;
@@ -324,9 +349,16 @@ export function FormulaExplainer({ strategy, etfMap }: Props) {
   const decisionRules = getDecisionRules(dc.method);
   const assetRows = buildAssetRows(strategy, etfMap);
 
-  // Collect all tickers for fetching
-  const tickers = assetRows.filter((r) => r.ticker !== '-').map((r) => r.ticker);
-  const priceData = usePriceData(tickers);
+  // Collect US reference tickers for fetching momentum data
+  const usTickers = assetRows.filter((r) => r.usTicker !== '-').map((r) => r.usTicker);
+  const priceData = usePriceData([...new Set(usTickers)]);
+
+  // Notify parent when momentum data is loaded
+  useEffect(() => {
+    if (onMomentumLoaded && Object.keys(priceData.momentum).length > 0) {
+      onMomentumLoaded(priceData.momentum);
+    }
+  }, [priceData.momentum, onMomentumLoaded]);
 
   const roleColor = (role: AssetRow['role']) => {
     switch (role) {
@@ -345,7 +377,7 @@ export function FormulaExplainer({ strategy, etfMap }: Props) {
     let aboveCount = 0;
     let dataAvailable = false;
     for (const row of offensiveRows) {
-      const m = priceData.momentum[row.ticker];
+      const m = priceData.momentum[row.usTicker];
       if (m?.aboveSMA10m != null) {
         dataAvailable = true;
         if (m.aboveSMA10m) aboveCount++;
@@ -453,7 +485,7 @@ export function FormulaExplainer({ strategy, etfMap }: Props) {
         )}
 
         {assetRows.map((row, i) => {
-          const m = priceData.momentum[row.ticker];
+          const m = priceData.momentum[row.usTicker];
           const hasData = !!m;
           const primaryScore = m ? getPrimaryScore(m, scoreType) : null;
           const isPositive = primaryScore != null && primaryScore > 0;
@@ -485,17 +517,18 @@ export function FormulaExplainer({ strategy, etfMap }: Props) {
                   </View>
                   <Text style={[typography.small, { color: theme.textSecondary, marginTop: 2 }]}>
                     {row.ticker !== '-' ? `${row.ticker} · ${row.name}` : '매핑 없음'}
+                    {row.usTicker !== '-' && row.usTicker !== row.ticker ? ` (모멘텀: ${row.usTicker})` : ''}
                   </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={[typography.bodyBold, { color: theme.text, fontSize: 14 }]}>
-                    {hasData && m.currentPrice != null
-                      ? fmtPrice(m.currentPrice, row.currency)
-                      : fmtPrice(row.price, row.currency)}
+                    {fmtPrice(row.price, row.currency)}
                   </Text>
-                  <Text style={[typography.small, { color: theme.textTertiary }]}>
-                    {hasData ? '실시간' : '기준가'}
-                  </Text>
+                  {hasData && m?.currentPrice != null && row.usTicker !== row.ticker && (
+                    <Text style={[typography.small, { color: theme.textTertiary }]}>
+                      {row.usTicker}: ${m.currentPrice.toLocaleString()}
+                    </Text>
+                  )}
                 </View>
               </View>
 
@@ -574,7 +607,7 @@ export function FormulaExplainer({ strategy, etfMap }: Props) {
               )}
 
               {/* 데이터 없음 */}
-              {!hasData && row.ticker !== '-' && !priceData.loading && (
+              {!hasData && row.usTicker !== '-' && !priceData.loading && (
                 <View style={[s.momentumSection, { borderTopColor: theme.border }]}>
                   <Text style={[typography.small, { color: theme.textTertiary, fontStyle: 'italic' }]}>
                     가격 데이터 대기 중
