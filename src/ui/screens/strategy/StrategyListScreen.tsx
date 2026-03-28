@@ -85,9 +85,9 @@ export function StrategyListScreen() {
           return (
             <Card
               onPress={() => {
-                if (!isCustom) {
-                  navigation.navigate('StrategyDetail', { strategyId: item.id });
-                }
+                // 커스텀 전략은 'custom-' 접두사 제거하여 원래 ID로 상세 화면 이동
+                const realId = isCustom ? item.id.replace('custom-', '') : item.id;
+                navigation.navigate('StrategyDetail', { strategyId: realId });
               }}
               style={{ marginHorizontal: 16 }}
             >
@@ -109,19 +109,19 @@ export function StrategyListScreen() {
               <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 4 }]} numberOfLines={2}>
                 {item.description}
               </Text>
-              {!isCustom && (
-                <Pressable
-                  onPress={() => {
-                    navigation.getParent()?.navigate('CalculatorTab', {
-                      screen: 'Calculator',
-                      params: { strategyId: item.id },
-                    });
-                  }}
-                  style={[styles.calcBtn, { borderColor: theme.primary }]}
-                >
-                  <Text style={[typography.captionBold, { color: theme.primary }]}>계산하기</Text>
-                </Pressable>
-              )}
+              <Pressable
+                onPress={() => {
+                  // 커스텀 전략은 'custom-' 접두사 제거하여 원래 ID로 전달
+                  const realId = isCustom ? item.id.replace('custom-', '') : item.id;
+                  navigation.getParent()?.navigate('CalculatorTab', {
+                    screen: 'Calculator',
+                    params: { strategyId: realId },
+                  });
+                }}
+                style={[styles.calcBtn, { borderColor: theme.primary }]}
+              >
+                <Text style={[typography.captionBold, { color: theme.primary }]}>계산하기</Text>
+              </Pressable>
             </Card>
           );
         }}

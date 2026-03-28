@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { uploadToCloud, downloadFromCloud, mergeData } from '../services/firestoreSync';
 
 export interface PortfolioAllocation {
   ticker: string;
@@ -34,6 +35,7 @@ export interface CustomStrategy {
   name: string;
   allocations: { assetClass: string; weight: number }[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface PortfolioContextType {
@@ -45,62 +47,113 @@ interface PortfolioContextType {
   saveCustomStrategy: (s: CustomStrategy) => Promise<void>;
   deleteCustomStrategy: (id: string) => Promise<void>;
   loading: boolean;
+  syncWithCloud: (uid: string) => Promise<void>;
+  syncing: boolean;
+  lastSyncedAt: string | null;
 }
 
 const PortfolioContext = createContext<PortfolioContextType | null>(null);
 
 const PORTFOLIOS_KEY = 'portfolios';
 const CUSTOM_STRATEGIES_KEY = 'customStrategies';
+const LAST_SYNCED_KEY = 'lastSyncedAt';
 
 export function PortfolioProvider({ children }: { children: ReactNode }) {
   const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
   const [customStrategies, setCustomStrategies] = useState<CustomStrategy[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
       AsyncStorage.getItem(PORTFOLIOS_KEY),
       AsyncStorage.getItem(CUSTOM_STRATEGIES_KEY),
-    ]).then(([p, c]) => {
+      AsyncStorage.getItem(LAST_SYNCED_KEY),
+    ]).then(([p, c, ls]) => {
       if (p) setPortfolios(JSON.parse(p));
       if (c) setCustomStrategies(JSON.parse(c));
+      if (ls) setLastSyncedAt(ls);
       setLoading(false);
     });
   }, []);
 
+  const persistPortfolios = useCallback(async (data: SavedPortfolio[]) => {
+    setPortfolios(data);
+    await AsyncStorage.setItem(PORTFOLIOS_KEY, JSON.stringify(data));
+  }, []);
+
+  const persistCustomStrategies = useCallback(async (data: CustomStrategy[]) => {
+    setCustomStrategies(data);
+    await AsyncStorage.setItem(CUSTOM_STRATEGIES_KEY, JSON.stringify(data));
+  }, []);
+
   const savePortfolio = useCallback(async (p: SavedPortfolio) => {
     const updated = [...portfolios.filter((x) => x.id !== p.id), p];
-    setPortfolios(updated);
-    await AsyncStorage.setItem(PORTFOLIOS_KEY, JSON.stringify(updated));
-  }, [portfolios]);
+    await persistPortfolios(updated);
+  }, [portfolios, persistPortfolios]);
 
   const updatePortfolio = useCallback(async (p: SavedPortfolio) => {
     const updated = portfolios.map((x) => (x.id === p.id ? { ...p, updatedAt: new Date().toISOString() } : x));
-    setPortfolios(updated);
-    await AsyncStorage.setItem(PORTFOLIOS_KEY, JSON.stringify(updated));
-  }, [portfolios]);
+    await persistPortfolios(updated);
+  }, [portfolios, persistPortfolios]);
 
   const deletePortfolio = useCallback(async (id: string) => {
     const updated = portfolios.filter((x) => x.id !== id);
-    setPortfolios(updated);
-    await AsyncStorage.setItem(PORTFOLIOS_KEY, JSON.stringify(updated));
-  }, [portfolios]);
+    await persistPortfolios(updated);
+  }, [portfolios, persistPortfolios]);
 
   const saveCustomStrategy = useCallback(async (s: CustomStrategy) => {
     const updated = [...customStrategies.filter((x) => x.id !== s.id), s];
-    setCustomStrategies(updated);
-    await AsyncStorage.setItem(CUSTOM_STRATEGIES_KEY, JSON.stringify(updated));
-  }, [customStrategies]);
+    await persistCustomStrategies(updated);
+  }, [customStrategies, persistCustomStrategies]);
 
   const deleteCustomStrategy = useCallback(async (id: string) => {
     const updated = customStrategies.filter((x) => x.id !== id);
-    setCustomStrategies(updated);
-    await AsyncStorage.setItem(CUSTOM_STRATEGIES_KEY, JSON.stringify(updated));
-  }, [customStrategies]);
+    await persistCustomStrategies(updated);
+  }, [customStrategies, persistCustomStrategies]);
+
+  const syncWithCloud = useCallback(async (uid: string) => {
+    setSyncing(true);
+    try {
+      // Download from cloud
+      const cloudData = await downloadFromCloud(uid);
+
+      let mergedPortfolios: SavedPortfolio[];
+      let mergedStrategies: CustomStrategy[];
+
+      if (cloudData) {
+        // Merge local + cloud
+        mergedPortfolios = mergeData(portfolios, cloudData.portfolios);
+        mergedStrategies = mergeData(customStrategies, cloudData.customStrategies);
+      } else {
+        mergedPortfolios = portfolios;
+        mergedStrategies = customStrategies;
+      }
+
+      // Upload merged data to cloud
+      await uploadToCloud(uid, mergedPortfolios, mergedStrategies);
+
+      // Save merged data locally
+      await persistPortfolios(mergedPortfolios);
+      await persistCustomStrategies(mergedStrategies);
+
+      const now = new Date().toISOString();
+      setLastSyncedAt(now);
+      await AsyncStorage.setItem(LAST_SYNCED_KEY, now);
+    } finally {
+      setSyncing(false);
+    }
+  }, [portfolios, customStrategies, persistPortfolios, persistCustomStrategies]);
 
   return (
     <PortfolioContext.Provider
-      value={{ portfolios, customStrategies, savePortfolio, updatePortfolio, deletePortfolio, saveCustomStrategy, deleteCustomStrategy, loading }}
+      value={{
+        portfolios, customStrategies,
+        savePortfolio, updatePortfolio, deletePortfolio,
+        saveCustomStrategy, deleteCustomStrategy,
+        loading, syncWithCloud, syncing, lastSyncedAt,
+      }}
     >
       {children}
     </PortfolioContext.Provider>
