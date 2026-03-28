@@ -1,12 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, FlatList } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  View, Text, StyleSheet, TextInput, Pressable, Modal, FlatList, ScrollView,
+} from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ScreenWrapper, Card, Button, Badge } from '../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { typography } from '../../../theme';
 import { strategies } from '../../../data/strategies';
-import { getETFUniverse } from '../../../data/etfs';
+import { getETFUniverse, getETFsByAssetClass, getCustomETFUniverse } from '../../../data/etfs';
 import { calculateAllocation } from '../../../core/engine/allocationEngine';
 import { formatCurrency, formatWeight, generateId } from '../../../utils/format';
 import { usePortfolio, SavedPortfolio } from '../../../contexts/PortfolioContext';
@@ -31,26 +33,47 @@ export function CalculatorScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<CalculatorStackParamList>>();
   const { savePortfolio } = usePortfolio();
 
-  const initialStrategy = route.params?.strategyId || strategies[0].id;
-  const [selectedStrategyId, setSelectedStrategyId] = useState(initialStrategy);
+  const [selectedStrategyId, setSelectedStrategyId] = useState(strategies[0].id);
   const [universe, setUniverse] = useState<Universe>('korea');
   const [amountText, setAmountText] = useState('');
   const [showResult, setShowResult] = useState(false);
+  const [showStrategyModal, setShowStrategyModal] = useState(false);
+  const [showETFModal, setShowETFModal] = useState(false);
+  const [etfOverrides, setEtfOverrides] = useState<Record<string, string>>({});
+
+  // strategyId 파라미터 동기화 — 전략 상세에서 넘어올 때
+  useEffect(() => {
+    const paramId = route.params?.strategyId;
+    if (paramId && strategies.some((s) => s.id === paramId)) {
+      setSelectedStrategyId(paramId);
+      setShowResult(false);
+    }
+  }, [route.params?.strategyId]);
 
   const strategy = strategies.find((s) => s.id === selectedStrategyId)!;
   const amount = parseFloat(amountText.replace(/,/g, '')) || 0;
   const presets = universe === 'us' ? PRESET_AMOUNTS_US : PRESET_AMOUNTS_KR;
 
+  const etfOptions = useMemo(() => getETFsByAssetClass(universe), [universe]);
+
   const result = useMemo(() => {
     if (!showResult || amount <= 0) return null;
-    const etfMap = getETFUniverse(universe);
+    const etfMap = Object.keys(etfOverrides).length > 0
+      ? getCustomETFUniverse(universe, etfOverrides)
+      : getETFUniverse(universe);
     return calculateAllocation(strategy, etfMap, amount, universe);
-  }, [showResult, amount, strategy, universe]);
+  }, [showResult, amount, strategy, universe, etfOverrides]);
+
+  // 전략에서 사용하는 자산군 중 대체 ETF가 있는 것 필터
+  const assetClassesWithOptions = useMemo(() => {
+    const classes = strategy.defaultAllocations.map((a) => a.assetClass);
+    return classes.filter((ac) => (etfOptions[ac]?.length ?? 0) > 1);
+  }, [strategy, etfOptions]);
 
   const handleCalculate = () => {
     if (amount <= 0) return;
     setShowResult(true);
-    showInterstitialAd(); // 세션당 1회만 노출
+    showInterstitialAd();
   };
 
   const handleSave = async () => {
@@ -62,10 +85,24 @@ export function CalculatorScreen() {
       universe,
       investmentAmount: amount,
       allocations: result.allocations,
+      etfOverrides: Object.keys(etfOverrides).length > 0 ? etfOverrides : undefined,
       createdAt: new Date().toISOString(),
     };
     await savePortfolio(portfolio);
     navigation.getParent()?.navigate('PortfolioTab');
+  };
+
+  const handleETFSelect = (assetClass: string, ticker: string) => {
+    const defaultMap = getETFUniverse(universe);
+    const defaultTicker = defaultMap[assetClass]?.ticker;
+    if (ticker === defaultTicker) {
+      const next = { ...etfOverrides };
+      delete next[assetClass];
+      setEtfOverrides(next);
+    } else {
+      setEtfOverrides({ ...etfOverrides, [assetClass]: ticker });
+    }
+    setShowResult(false);
   };
 
   return (
@@ -79,7 +116,7 @@ export function CalculatorScreen() {
           {(Object.keys(UNIVERSE_LABELS) as Universe[]).map((u) => (
             <Pressable
               key={u}
-              onPress={() => { setUniverse(u); setShowResult(false); }}
+              onPress={() => { setUniverse(u); setShowResult(false); setEtfOverrides({}); }}
               style={[
                 styles.chip,
                 { backgroundColor: universe === u ? theme.primary : theme.surfaceVariant },
@@ -93,38 +130,47 @@ export function CalculatorScreen() {
         </View>
       </View>
 
-      {/* Strategy selector */}
+      {/* Strategy selector — 모달 방식 */}
       <View style={styles.section}>
         <Text style={[typography.captionBold, { color: theme.textSecondary }]}>전략 선택</Text>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={strategies}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ gap: 8, paddingVertical: 8 }}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => { setSelectedStrategyId(item.id); setShowResult(false); }}
-              style={[
-                styles.strategyChip,
-                {
-                  backgroundColor: selectedStrategyId === item.id ? theme.primary : theme.surface,
-                  borderColor: selectedStrategyId === item.id ? theme.primary : theme.border,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  typography.captionBold,
-                  { color: selectedStrategyId === item.id ? '#FFF' : theme.text },
-                ]}
-              >
-                {item.name}
-              </Text>
-            </Pressable>
-          )}
-        />
+        <Pressable
+          onPress={() => setShowStrategyModal(true)}
+          style={[styles.selectorButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[typography.bodyBold, { color: theme.text }]}>{strategy.name}</Text>
+            <Text style={[typography.small, { color: theme.textSecondary }]} numberOfLines={1}>
+              {strategy.type === 'static' ? '정적' : '동적'} · {strategy.riskLevel ?? ''}
+            </Text>
+          </View>
+          <Text style={{ color: theme.textSecondary, fontSize: 18 }}>{'▾'}</Text>
+        </Pressable>
       </View>
+
+      {/* ETF 선택 — 대체 ETF가 있는 자산군만 */}
+      {assetClassesWithOptions.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[typography.captionBold, { color: theme.textSecondary }]}>ETF 선택</Text>
+            <Pressable onPress={() => setShowETFModal(true)}>
+              <Text style={[typography.captionBold, { color: theme.primary }]}>변경</Text>
+            </Pressable>
+          </View>
+          <View style={{ gap: 4, marginTop: 4 }}>
+            {assetClassesWithOptions.map((ac) => {
+              const overrideTicker = etfOverrides[ac];
+              const selected = overrideTicker
+                ? etfOptions[ac]?.find((e) => e.ticker === overrideTicker)
+                : etfOptions[ac]?.[0];
+              return (
+                <Text key={ac} style={[typography.small, { color: theme.textSecondary }]}>
+                  {ac}: {selected?.name} ({selected?.ticker})
+                </Text>
+              );
+            })}
+          </View>
+        </View>
+      )}
 
       {/* Amount input */}
       <View style={styles.section}>
@@ -134,11 +180,7 @@ export function CalculatorScreen() {
         <TextInput
           style={[
             styles.input,
-            {
-              backgroundColor: theme.surface,
-              borderColor: theme.border,
-              color: theme.text,
-            },
+            { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text },
           ]}
           value={amountText}
           onChangeText={(t) => { setAmountText(t); setShowResult(false); }}
@@ -176,7 +218,7 @@ export function CalculatorScreen() {
             </Text>
           </Card>
 
-          {result.allocations.map((a, i) => (
+          {result.allocations.map((a) => (
             <Card key={a.ticker}>
               <View style={styles.resultRow}>
                 <View style={{ flex: 1 }}>
@@ -196,15 +238,127 @@ export function CalculatorScreen() {
           <Button title="포트폴리오 저장" onPress={handleSave} variant="secondary" size="large" style={{ marginBottom: 24 }} />
         </View>
       )}
+
+      {/* Strategy Modal */}
+      <Modal visible={showStrategyModal} animationType="slide" transparent>
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[typography.h3, { color: theme.text }]}>전략 선택</Text>
+              <Pressable onPress={() => setShowStrategyModal(false)} style={styles.closeBtn}>
+                <Text style={[typography.bodyBold, { color: theme.textSecondary }]}>닫기</Text>
+              </Pressable>
+            </View>
+            <FlatList
+              data={strategies}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ paddingBottom: 24 }}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => {
+                    setSelectedStrategyId(item.id);
+                    setShowResult(false);
+                    setShowStrategyModal(false);
+                  }}
+                  style={[
+                    styles.modalItem,
+                    {
+                      backgroundColor: selectedStrategyId === item.id ? theme.primaryLight : theme.surface,
+                      borderColor: selectedStrategyId === item.id ? theme.primary : theme.border,
+                    },
+                  ]}
+                >
+                  <View style={styles.modalItemHeader}>
+                    <Badge
+                      label={item.type === 'static' ? '정적' : '동적'}
+                      color={item.type === 'static' ? theme.success : theme.primary}
+                      bgColor={item.type === 'static' ? theme.successLight : theme.primaryLight}
+                    />
+                    {item.riskLevel && (
+                      <Text style={[typography.small, { color: theme.textTertiary, marginLeft: 8 }]}>
+                        위험: {item.riskLevel}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[typography.bodyBold, { color: theme.text, marginTop: 4 }]}>{item.name}</Text>
+                  <Text style={[typography.small, { color: theme.textSecondary, marginTop: 2 }]} numberOfLines={2}>
+                    {item.description}
+                  </Text>
+                </Pressable>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* ETF Selection Modal */}
+      <Modal visible={showETFModal} animationType="slide" transparent>
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[typography.h3, { color: theme.text }]}>ETF 선택</Text>
+              <Pressable onPress={() => setShowETFModal(false)} style={styles.closeBtn}>
+                <Text style={[typography.bodyBold, { color: theme.textSecondary }]}>닫기</Text>
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+              {assetClassesWithOptions.map((ac) => {
+                const options = etfOptions[ac] ?? [];
+                const defaultMap = getETFUniverse(universe);
+                const defaultTicker = defaultMap[ac]?.ticker;
+                const selectedTicker = etfOverrides[ac] ?? defaultTicker;
+                return (
+                  <View key={ac} style={styles.etfSection}>
+                    <Text style={[typography.bodyBold, { color: theme.text, marginBottom: 8 }]}>{ac}</Text>
+                    {options.map((etf) => (
+                      <Pressable
+                        key={etf.ticker}
+                        onPress={() => handleETFSelect(ac, etf.ticker)}
+                        style={[
+                          styles.etfOption,
+                          {
+                            backgroundColor: selectedTicker === etf.ticker ? theme.primaryLight : theme.surface,
+                            borderColor: selectedTicker === etf.ticker ? theme.primary : theme.border,
+                          },
+                        ]}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={[typography.body, { color: theme.text }]}>{etf.name}</Text>
+                          <Text style={[typography.small, { color: theme.textSecondary }]}>
+                            {etf.ticker} · {etf.currency === 'KRW' ? `${etf.price.toLocaleString()}원` : `$${etf.price}`}
+                            {etf.aum ? ` · 규모 ${etf.aum.toLocaleString()}억` : ''}
+                          </Text>
+                        </View>
+                        {selectedTicker === etf.ticker && (
+                          <Text style={{ color: theme.primary, fontSize: 16 }}>{'✓'}</Text>
+                        )}
+                      </Pressable>
+                    ))}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   section: { marginTop: 20 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   chips: { flexDirection: 'row', gap: 8, marginTop: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  strategyChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1 },
+  selectorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 8,
+  },
   input: {
     borderWidth: 1,
     borderRadius: 10,
@@ -218,4 +372,13 @@ const styles = StyleSheet.create({
   presetChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   resultSection: { marginTop: 24 },
   resultRow: { flexDirection: 'row', alignItems: 'center' },
+  // Modal styles
+  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+  modalContent: { maxHeight: '80%', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12 },
+  closeBtn: { padding: 8 },
+  modalItem: { borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 8 },
+  modalItemHeader: { flexDirection: 'row', alignItems: 'center' },
+  etfSection: { marginBottom: 16 },
+  etfOption: { borderWidth: 1, borderRadius: 8, padding: 12, marginBottom: 6, flexDirection: 'row', alignItems: 'center' },
 });

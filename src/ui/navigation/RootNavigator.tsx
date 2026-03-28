@@ -32,6 +32,7 @@ function StrategyNavigator() {
     >
       <StrategyStack.Screen name="StrategyList" component={StrategyListScreen} options={{ headerShown: false }} />
       <StrategyStack.Screen name="StrategyDetail" component={StrategyDetailScreen} options={{ title: '전략 상세' }} />
+      <StrategyStack.Screen name="CustomStrategy" component={CustomStrategyScreen} options={{ title: '커스텀 전략' }} />
     </StrategyStack.Navigator>
   );
 }

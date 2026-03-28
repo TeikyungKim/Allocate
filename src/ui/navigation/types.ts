@@ -1,6 +1,7 @@
 export type StrategyStackParamList = {
   StrategyList: undefined;
   StrategyDetail: { strategyId: string };
+  CustomStrategy: undefined;
 };
 
 export type CalculatorStackParamList = {

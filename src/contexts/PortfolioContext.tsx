@@ -1,14 +1,32 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+export interface PortfolioAllocation {
+  ticker: string;
+  name: string;
+  assetClass: string;
+  weight: number;
+  shares: number;
+  amount: number;
+}
+
+export interface HoldingEntry {
+  ticker: string;
+  shares: number;
+}
+
 export interface SavedPortfolio {
   id: string;
   name: string;
   strategyId: string;
   universe: 'korea' | 'retirement' | 'us';
   investmentAmount: number;
-  allocations: { ticker: string; name: string; weight: number; shares: number; amount: number }[];
+  allocations: PortfolioAllocation[];
+  holdings?: HoldingEntry[];         // 보유 주식 수량
+  tolerancePercent?: number;         // 허용 괴리율 (%)
+  etfOverrides?: Record<string, string>; // { assetClass: ticker } ETF 선택 오버라이드
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CustomStrategy {
@@ -22,6 +40,7 @@ interface PortfolioContextType {
   portfolios: SavedPortfolio[];
   customStrategies: CustomStrategy[];
   savePortfolio: (p: SavedPortfolio) => Promise<void>;
+  updatePortfolio: (p: SavedPortfolio) => Promise<void>;
   deletePortfolio: (id: string) => Promise<void>;
   saveCustomStrategy: (s: CustomStrategy) => Promise<void>;
   deleteCustomStrategy: (id: string) => Promise<void>;
@@ -55,6 +74,12 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(PORTFOLIOS_KEY, JSON.stringify(updated));
   }, [portfolios]);
 
+  const updatePortfolio = useCallback(async (p: SavedPortfolio) => {
+    const updated = portfolios.map((x) => (x.id === p.id ? { ...p, updatedAt: new Date().toISOString() } : x));
+    setPortfolios(updated);
+    await AsyncStorage.setItem(PORTFOLIOS_KEY, JSON.stringify(updated));
+  }, [portfolios]);
+
   const deletePortfolio = useCallback(async (id: string) => {
     const updated = portfolios.filter((x) => x.id !== id);
     setPortfolios(updated);
@@ -75,7 +100,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
 
   return (
     <PortfolioContext.Provider
-      value={{ portfolios, customStrategies, savePortfolio, deletePortfolio, saveCustomStrategy, deleteCustomStrategy, loading }}
+      value={{ portfolios, customStrategies, savePortfolio, updatePortfolio, deletePortfolio, saveCustomStrategy, deleteCustomStrategy, loading }}
     >
       {children}
     </PortfolioContext.Provider>

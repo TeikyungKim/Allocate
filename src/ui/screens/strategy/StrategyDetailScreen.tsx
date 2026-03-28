@@ -35,22 +35,102 @@ export function StrategyDetailScreen() {
     legendFontSize: 12,
   }));
 
+  const dc = strategy.dynamicConfig;
+
   return (
     <ScreenWrapper>
       <View style={styles.top}>
-        <Badge
-          label={strategy.type === 'static' ? '정적 전략' : '동적 전략'}
-          color={strategy.type === 'static' ? theme.success : theme.primary}
-          bgColor={strategy.type === 'static' ? theme.successLight : theme.primaryLight}
-        />
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Badge
+            label={strategy.type === 'static' ? '정적 전략' : '동적 전략'}
+            color={strategy.type === 'static' ? theme.success : theme.primary}
+            bgColor={strategy.type === 'static' ? theme.successLight : theme.primaryLight}
+          />
+          {strategy.riskLevel && (
+            <Badge
+              label={`위험: ${strategy.riskLevel}`}
+              color={strategy.riskLevel === '높음' ? theme.danger : strategy.riskLevel === '중간' ? theme.warning : theme.success}
+              bgColor={theme.surfaceVariant}
+            />
+          )}
+        </View>
         <Text style={[typography.h1, { color: theme.text, marginTop: 8 }]}>{strategy.name}</Text>
         <Text style={[typography.body, { color: theme.textSecondary, marginTop: 8 }]}>
           {strategy.description}
         </Text>
       </View>
 
-      <Card style={{ marginTop: 16 }}>
-        <Text style={[typography.h3, { color: theme.text, marginBottom: 12 }]}>자산 배분</Text>
+      {/* 동적 전략: 간단 설명 */}
+      {strategy.shortDescription && (
+        <Card style={{ marginTop: 16 }}>
+          <Text style={[typography.h3, { color: theme.text, marginBottom: 8 }]}>전략 설명</Text>
+          <Text style={[typography.body, { color: theme.textSecondary, lineHeight: 22 }]}>
+            {strategy.shortDescription}
+          </Text>
+        </Card>
+      )}
+
+      {/* 동적 전략: 공식 */}
+      {strategy.formula && (
+        <Card style={{ marginTop: 4 }}>
+          <Text style={[typography.h3, { color: theme.text, marginBottom: 8 }]}>공식</Text>
+          <View style={[styles.formulaBox, { backgroundColor: theme.surfaceVariant }]}>
+            <Text style={[styles.formulaText, { color: theme.text }]}>
+              {strategy.formula}
+            </Text>
+          </View>
+        </Card>
+      )}
+
+      {/* 동적 전략: 자산 구성 */}
+      {dc && (
+        <Card style={{ marginTop: 4 }}>
+          <Text style={[typography.h3, { color: theme.text, marginBottom: 8 }]}>자산 구성</Text>
+          {dc.offensiveAssets && dc.offensiveAssets.length > 0 && (
+            <View style={styles.assetGroup}>
+              <Text style={[typography.captionBold, { color: theme.primary }]}>공격 자산</Text>
+              <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 2 }]}>
+                {dc.offensiveAssets.join(', ')}
+              </Text>
+            </View>
+          )}
+          {dc.defensiveAssets && dc.defensiveAssets.length > 0 && (
+            <View style={styles.assetGroup}>
+              <Text style={[typography.captionBold, { color: theme.success }]}>방어 자산</Text>
+              <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 2 }]}>
+                {dc.defensiveAssets.join(', ')}
+              </Text>
+            </View>
+          )}
+          {dc.canaryAssets && dc.canaryAssets.length > 0 && (
+            <View style={styles.assetGroup}>
+              <Text style={[typography.captionBold, { color: theme.warning }]}>카나리아 자산</Text>
+              <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 2 }]}>
+                {dc.canaryAssets.join(', ')}
+              </Text>
+            </View>
+          )}
+          {dc.lookbackMonths && (
+            <View style={styles.assetGroup}>
+              <Text style={[typography.captionBold, { color: theme.textSecondary }]}>룩백 기간</Text>
+              <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 2 }]}>
+                {dc.lookbackMonths.map((m) => `${m}개월`).join(', ')}
+              </Text>
+            </View>
+          )}
+          {dc.topN !== undefined && (
+            <View style={styles.assetGroup}>
+              <Text style={[typography.captionBold, { color: theme.textSecondary }]}>선택 종목 수</Text>
+              <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 2 }]}>
+                Top-{dc.topN}
+              </Text>
+            </View>
+          )}
+        </Card>
+      )}
+
+      <Card style={{ marginTop: 4 }}>
+        <Text style={[typography.h3, { color: theme.text, marginBottom: 12 }]}>기본 자산 배분</Text>
         <PieChart
           data={pieData}
           width={Dimensions.get('window').width - 64}
@@ -121,4 +201,16 @@ const styles = StyleSheet.create({
   },
   allocationLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   dot: { width: 12, height: 12, borderRadius: 6 },
+  formulaBox: {
+    padding: 12,
+    borderRadius: 8,
+  },
+  formulaText: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  assetGroup: {
+    marginBottom: 10,
+  },
 });
