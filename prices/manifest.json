@@ -1,174 +1,153 @@
 {
   "tickers": [
-    "EFA",
-    "TLT",
     "EEM",
+    "EFA",
     "SPY",
-    "IVV",
-    "VOO",
-    "SHY",
-    "BND",
-    "IEF",
-    "GLD",
     "AGG",
-    "IAU",
+    "VOO",
+    "TLT",
+    "IVV",
+    "IEF",
+    "SHY",
     "DBC",
-    "VTV"
+    "BND",
+    "IAU",
+    "GLD",
+    "VNQ",
+    "QQQ",
+    "LQD",
+    "BIL",
+    "HYG",
+    "VTV",
+    "SCHD",
+    "VBR"
   ],
-  "updatedAt": "2026-03-28T14:35:30.456Z",
-  "count": 14,
+  "updatedAt": "2026-03-28T14:45:09.328Z",
+  "count": 21,
   "failed": [
     {
-      "ticker": "VBR",
-      "error": "API error for VBR: You have run out of API credits for the current minute. 9 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "VNQ",
-      "error": "API error for VNQ: You have run out of API credits for the current minute. 10 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "BIL",
-      "error": "API error for BIL: You have run out of API credits for the current minute. 12 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "QQQ",
-      "error": "API error for QQQ: You have run out of API credits for the current minute. 11 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "SCHD",
-      "error": "API error for SCHD: You have run out of API credits for the current minute. 13 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
       "ticker": "360750",
-      "error": "API error for 360750: You have run out of API credits for the current minute. 15 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "HYG",
-      "error": "API error for HYG: You have run out of API credits for the current minute. 14 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "195930",
-      "error": "API error for 195930: You have run out of API credits for the current minute. 16 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "379800",
-      "error": "API error for 379800: You have run out of API credits for the current minute. 17 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "LQD",
-      "error": "API error for LQD: You have run out of API credits for the current minute. 18 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "451540",
-      "error": "API error for 451540: You have run out of API credits for the current minute. 20 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "error": "API error for 360750: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
       "ticker": "308620",
-      "error": "API error for 308620: You have run out of API credits for the current minute. 19 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "error": "API error for 308620: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+    },
+    {
+      "ticker": "451540",
+      "error": "API error for 451540: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+    },
+    {
+      "ticker": "195930",
+      "error": "API error for 195930: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
       "ticker": "195980",
-      "error": "API error for 195980: You have run out of API credits for the current minute. 22 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "305080",
-      "error": "API error for 305080: You have run out of API credits for the current minute. 21 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "153130",
-      "error": "API error for 153130: You have run out of API credits for the current minute. 23 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "error": "API error for 195980: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
       "ticker": "304660",
-      "error": "API error for 304660: You have run out of API credits for the current minute. 24 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "error": "API error for 304660: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
-      "ticker": "133690",
-      "error": "API error for 133690: You have run out of API credits for the current minute. 25 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "ticker": "379800",
+      "error": "API error for 379800: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
-      "ticker": "411060",
-      "error": "API error for 411060: You have run out of API credits for the current minute. 26 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "ticker": "153130",
+      "error": "API error for 153130: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
       "ticker": "261220",
-      "error": "API error for 261220: You have run out of API credits for the current minute. 27 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "error": "API error for 261220: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
-      "ticker": "132030",
-      "error": "API error for 132030: You have run out of API credits for the current minute. 28 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "ticker": "411060",
+      "error": "API error for 411060: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
       "ticker": "214330",
-      "error": "API error for 214330: You have run out of API credits for the current minute. 29 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "error": "API error for 214330: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
       "ticker": "352560",
-      "error": "API error for 352560: You have run out of API credits for the current minute. 30 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "error": "API error for 352560: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+    },
+    {
+      "ticker": "305080",
+      "error": "API error for 305080: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+    },
+    {
+      "ticker": "132030",
+      "error": "API error for 132030: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
       "ticker": "429760",
       "error": "API error for 429760: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
-      "ticker": "289040",
-      "error": "API error for 289040: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "251350",
-      "error": "API error for 251350: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "161510",
-      "error": "API error for 161510: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
-    },
-    {
-      "ticker": "381180",
-      "error": "API error for 381180: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+      "ticker": "133690",
+      "error": "API error for 133690: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
       "ticker": "458730",
       "error": "API error for 458730: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
-      "ticker": "182490",
-      "error": "API error for 182490: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+      "ticker": "289040",
+      "error": "API error for 289040: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
-      "ticker": "379810",
-      "error": "API error for 379810: You have run out of API credits for the current minute. 9 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "ticker": "381180",
+      "error": "API error for 381180: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+    },
+    {
+      "ticker": "161510",
+      "error": "API error for 161510: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+    },
+    {
+      "ticker": "251350",
+      "error": "API error for 251350: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
       "ticker": "453810",
       "error": "API error for 453810: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
-      "ticker": "352540",
-      "error": "API error for 352540: You have run out of API credits for the current minute. 11 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
-    },
-    {
       "ticker": "453850",
-      "error": "API error for 453850: You have run out of API credits for the current minute. 12 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "error": "API error for 453850: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
-      "ticker": "272580",
-      "error": "API error for 272580: You have run out of API credits for the current minute. 10 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "ticker": "379810",
+      "error": "API error for 379810: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
-      "ticker": "261060",
-      "error": "API error for 261060: You have run out of API credits for the current minute. 13 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "ticker": "352540",
+      "error": "API error for 352540: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+    },
+    {
+      "ticker": "182490",
+      "error": "API error for 182490: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
       "ticker": "459580",
-      "error": "API error for 459580: You have run out of API credits for the current minute. 14 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "error": "API error for 459580: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
-      "ticker": "278530",
-      "error": "API error for 278530: You have run out of API credits for the current minute. 15 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "ticker": "272580",
+      "error": "API error for 272580: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     },
     {
       "ticker": "069500",
-      "error": "API error for 069500: You have run out of API credits for the current minute. 16 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing"
+      "error": "API error for 069500: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+    },
+    {
+      "ticker": "278530",
+      "error": "API error for 278530: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+    },
+    {
+      "ticker": "261060",
+      "error": "API error for 261060: This symbol is available starting with the Pro or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
     }
   ]
 }
