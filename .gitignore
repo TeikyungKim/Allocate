@@ -36,6 +36,7 @@ yarn-error.*
 
 # Firebase / secrets
 GoogleService-Info.plist
+google-services.json
 
 # misc
 *.png.bak
