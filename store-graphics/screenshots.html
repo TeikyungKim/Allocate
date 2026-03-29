@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Play Store Screenshots - 1080x1920 (9:16)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    background: #111; padding: 40px; display: flex; flex-wrap: wrap; gap: 30px;
+  }
+  .screenshot {
+    width: 1080px; height: 1920px;
+    position: relative; overflow: hidden;
+    flex-shrink: 0;
+  }
+  /* --- Style 1: Dark gradient --- */
+  .style-dark {
+    background: linear-gradient(170deg, #0F172A 0%, #1E293B 60%, #0F172A 100%);
+  }
+  .style-dark .headline { color: #F1F5F9; }
+  .style-dark .subtext { color: #94A3B8; }
+  .style-dark .phone-frame { background: #1E293B; border-color: #334155; }
+  .style-dark .mockup-bg { background: #0F172A; }
+
+  /* --- Style 2: Light gradient --- */
+  .style-light {
+    background: linear-gradient(170deg, #F8FAFC 0%, #E2E8F0 60%, #F1F5F9 100%);
+  }
+  .style-light .headline { color: #1A1A2E; }
+  .style-light .subtext { color: #6B7280; }
+  .style-light .phone-frame { background: #FFFFFF; border-color: #E5E7EB; }
+  .style-light .mockup-bg { background: #F8F9FA; }
+
+  /* --- Style 3: Blue gradient --- */
+  .style-blue {
+    background: linear-gradient(170deg, #1E3A5F 0%, #2563EB 60%, #1D4ED8 100%);
+  }
+  .style-blue .headline { color: #FFFFFF; }
+  .style-blue .subtext { color: #BFDBFE; }
+  .style-blue .phone-frame { background: #1E293B; border-color: #3B82F6; }
+  .style-blue .mockup-bg { background: #0F172A; }
+
+  /* Common elements */
+  .top-section {
+    padding: 80px 60px 40px;
+    text-align: center;
+  }
+  .headline {
+    font-size: 56px; font-weight: 800;
+    line-height: 1.3; letter-spacing: -1px;
+    margin-bottom: 16px;
+  }
+  .subtext {
+    font-size: 28px; font-weight: 400;
+    line-height: 1.5;
+  }
+  .phone-area {
+    display: flex; justify-content: center;
+    padding: 30px 60px 0;
+  }
+  .phone-frame {
+    width: 380px; height: 780px;
+    border-radius: 40px;
+    border: 3px solid;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05);
+    position: relative;
+  }
+  .phone-notch {
+    width: 160px; height: 32px;
+    background: #000; border-radius: 0 0 20px 20px;
+    margin: 0 auto;
+    position: relative; z-index: 5;
+  }
+  .mockup-bg {
+    width: 100%; height: 100%;
+    padding: 16px;
+    position: relative;
+  }
+
+  /* ===== Mock UI Components ===== */
+
+  /* Status bar */
+  .status-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 8px 12px; font-size: 13px; color: #94A3B8;
+  }
+
+  /* Tab bar */
+  .tab-bar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 70px; background: #1E293B;
+    border-top: 1px solid #334155;
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 0 8px;
+  }
+  .tab-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-size: 11px; color: #64748B;
+  }
+  .tab-item.active { color: #3B82F6; }
+  .tab-icon {
+    width: 24px; height: 24px; border-radius: 4px;
+    background: currentColor; opacity: 0.4;
+  }
+  .tab-item.active .tab-icon { opacity: 1; }
+
+  /* Section header */
+  .mock-section-header {
+    font-size: 18px; font-weight: 700; color: #F1F5F9;
+    margin: 12px 0 10px; padding: 0 4px;
+  }
+
+  /* Strategy card */
+  .mock-card {
+    background: #1E293B; border-radius: 16px;
+    padding: 18px; margin-bottom: 12px;
+    border: 1px solid #334155;
+  }
+  .mock-card-title {
+    font-size: 16px; font-weight: 700; color: #F1F5F9;
+    margin-bottom: 4px;
+  }
+  .mock-card-sub {
+    font-size: 13px; color: #94A3B8; margin-bottom: 10px;
+  }
+  .mock-card-row {
+    display: flex; gap: 8px;
+  }
+  .mock-badge {
+    padding: 4px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge-aggressive { background: rgba(239,68,68,0.15); color: #F87171; }
+  .badge-defensive { background: rgba(16,185,129,0.15); color: #34D399; }
+  .badge-moderate { background: rgba(59,130,246,0.15); color: #60A5FA; }
+  .badge-allweather { background: rgba(251,191,36,0.15); color: #FBBF24; }
+  .badge-monthly { background: rgba(148,163,184,0.1); color: #94A3B8; }
+
+  /* Light mode mock UI */
+  .light-mock .mock-section-header { color: #1A1A2E; }
+  .light-mock .mock-card { background: #FFFFFF; border-color: #E5E7EB; }
+  .light-mock .mock-card-title { color: #1A1A2E; }
+  .light-mock .mock-card-sub { color: #6B7280; }
+  .light-mock .tab-bar { background: #FFFFFF; border-color: #E5E7EB; }
+  .light-mock .tab-item { color: #9CA3AF; }
+  .light-mock .tab-item.active { color: #2563EB; }
+  .light-mock .status-bar { color: #6B7280; }
+
+  /* Pie chart mock */
+  .mock-pie {
+    width: 200px; height: 200px; margin: 20px auto;
+  }
+
+  /* Allocation table */
+  .mock-table {
+    width: 100%; border-collapse: collapse;
+    margin-top: 12px;
+  }
+  .mock-table th {
+    font-size: 12px; color: #64748B; text-align: left;
+    padding: 8px 6px; border-bottom: 1px solid #334155;
+    font-weight: 600;
+  }
+  .mock-table td {
+    font-size: 13px; color: #E2E8F0; padding: 10px 6px;
+    border-bottom: 1px solid rgba(51,65,85,0.5);
+  }
+  .mock-table .ticker { color: #60A5FA; font-weight: 700; }
+  .mock-table .weight { color: #34D399; font-weight: 600; }
+  .mock-table .amount { font-variant-numeric: tabular-nums; }
+
+  /* Input mock */
+  .mock-input-group { margin-bottom: 20px; }
+  .mock-label {
+    font-size: 14px; font-weight: 600; color: #94A3B8;
+    margin-bottom: 8px; display: block;
+  }
+  .mock-input {
+    width: 100%; height: 52px; border-radius: 12px;
+    background: #0F172A; border: 1px solid #334155;
+    padding: 0 16px; font-size: 18px; color: #F1F5F9;
+    display: flex; align-items: center;
+  }
+  .mock-input.filled { color: #3B82F6; font-weight: 700; }
+
+  /* Button */
+  .mock-button {
+    width: 100%; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, #2563EB, #3B82F6);
+    color: white; font-size: 18px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(37,99,235,0.3);
+    margin-top: 20px;
+  }
+
+  /* Selector chips */
+  .mock-chips {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .mock-chip {
+    padding: 10px 18px; border-radius: 12px;
+    font-size: 14px; color: #94A3B8;
+    background: #0F172A; border: 1px solid #334155;
+  }
+  .mock-chip.selected {
+    color: #3B82F6; border-color: #3B82F6;
+    background: rgba(59,130,246,0.1);
+  }
+
+  /* Page indicator */
+  .page-num {
+    position: absolute; bottom: 20px; right: 20px;
+    background: rgba(0,0,0,0.5); color: #94A3B8;
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 16px; font-weight: 600;
+  }
+
+  /* Accent line */
+  .accent-line {
+    width: 60px; height: 4px; border-radius: 2px;
+    background: linear-gradient(90deg, #2563EB, #60A5FA);
+    margin: 0 auto 20px;
+  }
+
+  /* Detail screen mock */
+  .detail-header {
+    padding: 16px 0 12px;
+    border-bottom: 1px solid #334155;
+    margin-bottom: 16px;
+  }
+  .detail-title {
+    font-size: 22px; font-weight: 800; color: #F1F5F9;
+    margin-bottom: 4px;
+  }
+  .detail-author {
+    font-size: 14px; color: #64748B;
+  }
+  .detail-section {
+    margin-bottom: 16px;
+  }
+  .detail-section-title {
+    font-size: 15px; font-weight: 700; color: #60A5FA;
+    margin-bottom: 8px;
+  }
+  .detail-text {
+    font-size: 14px; color: #CBD5E1; line-height: 1.7;
+  }
+  .asset-row {
+    display: flex; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid rgba(51,65,85,0.3);
+    font-size: 14px; color: #E2E8F0;
+  }
+
+  /* Portfolio card */
+  .portfolio-card {
+    background: #1E293B; border-radius: 16px;
+    padding: 20px; margin-bottom: 14px;
+    border: 1px solid #334155;
+  }
+  .portfolio-card-top {
+    display: flex; justify-content: space-between; align-items: start;
+    margin-bottom: 10px;
+  }
+  .portfolio-name {
+    font-size: 17px; font-weight: 700; color: #F1F5F9;
+  }
+  .portfolio-date {
+    font-size: 12px; color: #64748B;
+  }
+  .portfolio-amount {
+    font-size: 24px; font-weight: 800; color: #3B82F6;
+    margin-bottom: 6px;
+  }
+  .portfolio-meta {
+    font-size: 13px; color: #94A3B8;
+  }
+  .mini-bar {
+    height: 6px; border-radius: 3px; overflow: hidden;
+    display: flex; margin-top: 12px;
+  }
+
+  /* Formula explainer mock */
+  .formula-box {
+    background: #0F172A; border-radius: 12px;
+    padding: 16px; margin: 12px 0;
+    border: 1px solid #334155;
+    font-family: 'Courier New', monospace;
+    font-size: 15px; color: #60A5FA;
+    text-align: center; line-height: 2;
+  }
+
+  /* Disclaimer */
+  .mock-disclaimer {
+    margin-top: 16px; padding: 12px;
+    background: rgba(245,158,11,0.08);
+    border-radius: 10px; border: 1px solid rgba(245,158,11,0.15);
+    font-size: 11px; color: #94A3B8; line-height: 1.6;
+  }
+
+  /* ---- Screenshot label ---- */
+  .ss-label {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(0,0,0,0.8); color: #60A5FA;
+    padding: 8px 16px; border-radius: 8px;
+    font-size: 16px; font-weight: 700;
+    z-index: 10;
+  }
+</style>
+</head>
+<body>
+
+<!-- ======================================== -->
+<!-- Screenshot 1: 전략 목록 화면 -->
+<!-- ======================================== -->
+<div class="screenshot style-dark" id="ss1">
+  <div class="ss-label">SS-1</div>
+  <div class="top-section">
+    <div class="headline">검증된 19가지<br>자산배분 전략</div>
+    <div class="subtext">동적·정적 전략을 한눈에 비교</div>
+  </div>
+  <div class="phone-area">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="mockup-bg" style="background:#0F172A;">
+        <div class="status-bar"><span>9:41</span><span>100%</span></div>
+
+        <div class="mock-section-header">동적 전략</div>
+
+        <div class="mock-card">
+          <div class="mock-card-title">듀얼 모멘텀</div>
+          <div class="mock-card-sub">Gary Antonacci · 상대+절대 모멘텀 결합</div>
+          <div class="mock-card-row">
+            <span class="mock-badge badge-aggressive">공격형</span>
+            <span class="mock-badge badge-monthly">월간 리밸런싱</span>
+          </div>
+        </div>
+
+        <div class="mock-card">
+          <div class="mock-card-title">VAA (Vigilant Asset Allocation)</div>
+          <div class="mock-card-sub">Wouter Keller · 13612W 가중 모멘텀</div>
+          <div class="mock-card-row">
+            <span class="mock-badge badge-defensive">방어형</span>
+            <span class="mock-badge badge-monthly">월간 리밸런싱</span>
+          </div>
+        </div>
+
+        <div class="mock-card">
+          <div class="mock-card-title">DAA (Defensive Asset Allocation)</div>
+          <div class="mock-card-sub">Wouter Keller · 카나리아 신호 기반</div>
+          <div class="mock-card-row">
+            <span class="mock-badge badge-moderate">균형형</span>
+            <span class="mock-badge badge-monthly">월간 리밸런싱</span>
+          </div>
+        </div>
+
+        <div class="mock-card" style="opacity:0.6;">
+          <div class="mock-card-title">LAA (Lethargic Asset Allocation)</div>
+          <div class="mock-card-sub">Wouter Keller · 실업률 기반 전환</div>
+        </div>
+
+        <div class="tab-bar">
+          <div class="tab-item active"><div class="tab-icon"></div>전략</div>
+          <div class="tab-item"><div class="tab-icon"></div>계산기</div>
+          <div class="tab-item"><div class="tab-icon"></div>포트폴리오</div>
+          <div class="tab-item"><div class="tab-icon"></div>설정</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-num">1/8</div>
+</div>
+
+<!-- ======================================== -->
+<!-- Screenshot 2: 전략 상세 화면 -->
+<!-- ======================================== -->
+<div class="screenshot style-blue" id="ss2">
+  <div class="ss-label">SS-2</div>
+  <div class="top-section">
+    <div class="headline">전략 규칙을<br>한국어로 상세 설명</div>
+    <div class="subtext">투자 원리와 로직을 쉽게 이해</div>
+  </div>
+  <div class="phone-area">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="mockup-bg" style="background:#0F172A;">
+        <div class="status-bar"><span>9:41</span><span>100%</span></div>
+
+        <div class="detail-header">
+          <div class="detail-title">듀얼 모멘텀</div>
+          <div class="detail-author">Gary Antonacci · 월간 리밸런싱</div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">전략 규칙</div>
+          <div class="detail-text">
+            1. SPY와 EFA의 12개월 수익률을 비교합니다.<br>
+            2. 더 높은 수익률의 자산을 선택합니다.<br>
+            3. 선택된 자산의 절대 수익률이 0% 미만이면<br>
+            &nbsp;&nbsp;&nbsp;안전자산(AGG)으로 전환합니다.
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">사용 자산군</div>
+          <div class="asset-row"><span>미국 주식</span><span style="color:#60A5FA">SPY</span></div>
+          <div class="asset-row"><span>선진국 주식</span><span style="color:#60A5FA">EFA</span></div>
+          <div class="asset-row"><span>미국 채권</span><span style="color:#60A5FA">AGG</span></div>
+        </div>
+
+        <div class="formula-box">
+          Score = 12개월 수익률<br>
+          Signal = max(SPY, EFA) > 0 ?<br>
+          &nbsp;&nbsp;Risk-On : Risk-Off
+        </div>
+
+        <div class="mock-button" style="margin-top:16px;">이 전략으로 계산하기</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-num">2/8</div>
+</div>
+
+<!-- ======================================== -->
+<!-- Screenshot 3: 계산기 입력 화면 -->
+<!-- ======================================== -->
+<div class="screenshot style-dark" id="ss3">
+  <div class="ss-label">SS-3</div>
+  <div class="top-section">
+    <div class="headline">금액 입력하고<br>전략 선택하면 끝</div>
+    <div class="subtext">복잡한 계산은 앱이 대신합니다</div>
+  </div>
+  <div class="phone-area">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="mockup-bg" style="background:#0F172A;">
+        <div class="status-bar"><span>9:41</span><span>100%</span></div>
+
+        <div style="padding:4px;">
+          <div class="mock-input-group">
+            <div class="mock-label">투자 금액</div>
+            <div class="mock-input filled">10,000,000원</div>
+          </div>
+
+          <div class="mock-input-group">
+            <div class="mock-label">ETF 유니버스</div>
+            <div class="mock-chips">
+              <div class="mock-chip selected">🇰🇷 한국 상장</div>
+              <div class="mock-chip">🏦 퇴직연금</div>
+              <div class="mock-chip">🇺🇸 미국 상장</div>
+            </div>
+          </div>
+
+          <div class="mock-input-group">
+            <div class="mock-label">전략 선택</div>
+            <div class="mock-input filled" style="font-size:16px;">올웨더 포트폴리오 (Ray Dalio)</div>
+          </div>
+
+          <div class="mock-input-group">
+            <div class="mock-label">계좌 유형</div>
+            <div class="mock-chips">
+              <div class="mock-chip selected">일반 계좌</div>
+              <div class="mock-chip">퇴직연금 (IRP/DC)</div>
+            </div>
+          </div>
+
+          <div class="mock-button">계산하기</div>
+
+          <div class="mock-disclaimer">
+            본 앱은 투자 조언을 제공하지 않습니다. 모든 투자 결정은 본인의 판단과 책임 하에 이루어져야 합니다.
+          </div>
+        </div>
+
+        <div class="tab-bar">
+          <div class="tab-item"><div class="tab-icon"></div>전략</div>
+          <div class="tab-item active"><div class="tab-icon"></div>계산기</div>
+          <div class="tab-item"><div class="tab-icon"></div>포트폴리오</div>
+          <div class="tab-item"><div class="tab-icon"></div>설정</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-num">3/8</div>
+</div>
+
+<!-- ======================================== -->
+<!-- Screenshot 4: 배분 결과 (파이차트) -->
+<!-- ======================================== -->
+<div class="screenshot style-blue" id="ss4">
+  <div class="ss-label">SS-4</div>
+  <div class="top-section">
+    <div class="headline">ETF별 배분 비중을<br>한눈에 확인</div>
+    <div class="subtext">파이 차트로 자산 구성을 시각화</div>
+  </div>
+  <div class="phone-area">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="mockup-bg" style="background:#0F172A;">
+        <div class="status-bar"><span>9:41</span><span>100%</span></div>
+
+        <div style="padding:4px;">
+          <div style="text-align:center; margin-bottom: 8px;">
+            <div style="font-size:15px; color:#94A3B8;">올웨더 포트폴리오</div>
+            <div style="font-size:26px; font-weight:800; color:#F1F5F9; margin-top:4px;">10,000,000원</div>
+          </div>
+
+          <!-- Pie chart SVG -->
+          <svg class="mock-pie" viewBox="0 0 200 200" style="display:block; margin: 10px auto; width:200px; height:200px;">
+            <!-- US Equity 30% -->
+            <circle cx="100" cy="100" r="80" fill="none" stroke="#3B82F6" stroke-width="36"
+                    stroke-dasharray="150.8 502.65" transform="rotate(-90 100 100)"/>
+            <!-- Long Bond 40% -->
+            <circle cx="100" cy="100" r="80" fill="none" stroke="#10B981" stroke-width="36"
+                    stroke-dasharray="201.06 502.65" stroke-dashoffset="-150.8" transform="rotate(-90 100 100)"/>
+            <!-- Mid Bond 15% -->
+            <circle cx="100" cy="100" r="80" fill="none" stroke="#F59E0B" stroke-width="36"
+                    stroke-dasharray="75.4 502.65" stroke-dashoffset="-351.86" transform="rotate(-90 100 100)"/>
+            <!-- Gold 7.5% -->
+            <circle cx="100" cy="100" r="80" fill="none" stroke="#EF4444" stroke-width="36"
+                    stroke-dasharray="37.7 502.65" stroke-dashoffset="-427.26" transform="rotate(-90 100 100)"/>
+            <!-- Commodity 7.5% -->
+            <circle cx="100" cy="100" r="80" fill="none" stroke="#8B5CF6" stroke-width="36"
+                    stroke-dasharray="37.7 502.65" stroke-dashoffset="-464.96" transform="rotate(-90 100 100)"/>
+            <text x="100" y="96" text-anchor="middle" font-size="14" fill="#94A3B8">총 배분</text>
+            <text x="100" y="116" text-anchor="middle" font-size="20" fill="#F1F5F9" font-weight="800">100%</text>
+          </svg>
+
+          <!-- Legend -->
+          <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:12px 0;">
+            <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:#E2E8F0;">
+              <div style="width:10px;height:10px;border-radius:3px;background:#3B82F6;"></div>미국 주식 30%
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:#E2E8F0;">
+              <div style="width:10px;height:10px;border-radius:3px;background:#10B981;"></div>장기 국채 40%
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:#E2E8F0;">
+              <div style="width:10px;height:10px;border-radius:3px;background:#F59E0B;"></div>중기 국채 15%
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:#E2E8F0;">
+              <div style="width:10px;height:10px;border-radius:3px;background:#EF4444;"></div>금 7.5%
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:#E2E8F0;">
+              <div style="width:10px;height:10px;border-radius:3px;background:#8B5CF6;"></div>원자재 7.5%
+            </div>
+          </div>
+
+          <div class="mock-button" style="font-size:15px; height:46px;">포트폴리오 저장</div>
+          <div class="mock-button" style="font-size:15px; height:46px; margin-top:10px; background:linear-gradient(135deg,#1E293B,#334155); box-shadow:none; border:1px solid #334155;">이미지로 공유</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-num">4/8</div>
+</div>
+
+<!-- ======================================== -->
+<!-- Screenshot 5: 배분 결과 (매수 테이블) -->
+<!-- ======================================== -->
+<div class="screenshot style-dark" id="ss5">
+  <div class="ss-label">SS-5</div>
+  <div class="top-section">
+    <div class="headline">정확한 매수 수량과<br>잔여 현금 확인</div>
+    <div class="subtext">ETF별 목표 비중·금액·수량을 표시</div>
+  </div>
+  <div class="phone-area">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="mockup-bg" style="background:#0F172A;">
+        <div class="status-bar"><span>9:41</span><span>100%</span></div>
+
+        <div style="padding:4px;">
+          <div style="font-size:14px; color:#94A3B8; margin-bottom:4px;">올웨더 포트폴리오 · 한국 상장 ETF</div>
+          <div style="font-size:22px; font-weight:800; color:#F1F5F9; margin-bottom:16px;">매수 테이블</div>
+
+          <table class="mock-table">
+            <thead>
+              <tr><th>ETF</th><th>비중</th><th>금액</th><th>수량</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="ticker">360750</span><br><span style="font-size:11px;color:#64748B;">TIGER S&P500</span></td>
+                <td class="weight">30.0%</td>
+                <td class="amount">3,000,000</td>
+                <td style="font-weight:700;">168주</td>
+              </tr>
+              <tr>
+                <td><span class="ticker">451540</span><br><span style="font-size:11px;color:#64748B;">TIGER 미국채30년</span></td>
+                <td class="weight">40.0%</td>
+                <td class="amount">4,000,000</td>
+                <td style="font-weight:700;">432주</td>
+              </tr>
+              <tr>
+                <td><span class="ticker">308620</span><br><span style="font-size:11px;color:#64748B;">KODEX 미국채10년</span></td>
+                <td class="weight">15.0%</td>
+                <td class="amount">1,500,000</td>
+                <td style="font-weight:700;">156주</td>
+              </tr>
+              <tr>
+                <td><span class="ticker">132030</span><br><span style="font-size:11px;color:#64748B;">KODEX 골드선물</span></td>
+                <td class="weight">7.5%</td>
+                <td class="amount">750,000</td>
+                <td style="font-weight:700;">52주</td>
+              </tr>
+              <tr>
+                <td><span class="ticker">261220</span><br><span style="font-size:11px;color:#64748B;">KODEX WTI원유</span></td>
+                <td class="weight">7.5%</td>
+                <td class="amount">750,000</td>
+                <td style="font-weight:700;">103주</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="display:flex; justify-content:space-between; margin-top:16px; padding:14px; background:#1E293B; border-radius:12px;">
+            <span style="font-size:14px; color:#94A3B8;">잔여 현금</span>
+            <span style="font-size:16px; font-weight:700; color:#F59E0B;">12,340원</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-num">5/8</div>
+</div>
+
+<!-- ======================================== -->
+<!-- Screenshot 6: ETF 유니버스 선택 -->
+<!-- ======================================== -->
+<div class="screenshot style-blue" id="ss6">
+  <div class="ss-label">SS-6</div>
+  <div class="top-section">
+    <div class="headline">한국·미국·퇴직연금<br>3가지 유니버스</div>
+    <div class="subtext">계좌 유형에 맞는 ETF를 자동 매핑</div>
+  </div>
+  <div class="phone-area">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="mockup-bg" style="background:#0F172A;">
+        <div class="status-bar"><span>9:41</span><span>100%</span></div>
+
+        <div style="padding:4px;">
+          <div class="mock-section-header">ETF 유니버스 선택</div>
+
+          <!-- Universe cards -->
+          <div class="mock-card" style="border-color:#3B82F6; background:rgba(59,130,246,0.08);">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="font-size:32px;">🇰🇷</div>
+              <div>
+                <div class="mock-card-title">한국 상장 ETF</div>
+                <div class="mock-card-sub" style="margin:0;">국내 증권사 일반 계좌</div>
+              </div>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:6px; flex-wrap:wrap;">
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(59,130,246,0.1); color:#60A5FA; font-size:12px;">TIGER S&P500</span>
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(59,130,246,0.1); color:#60A5FA; font-size:12px;">KODEX 200</span>
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(59,130,246,0.1); color:#60A5FA; font-size:12px;">KODEX 골드</span>
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(59,130,246,0.1); color:#60A5FA; font-size:12px;">+12</span>
+            </div>
+          </div>
+
+          <div class="mock-card">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="font-size:32px;">🏦</div>
+              <div>
+                <div class="mock-card-title">퇴직연금 ETF</div>
+                <div class="mock-card-sub" style="margin:0;">IRP/DC 계좌 투자 가능 종목</div>
+              </div>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:6px; flex-wrap:wrap;">
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(51,65,85,0.5); color:#94A3B8; font-size:12px;">KODEX S&P500TR</span>
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(51,65,85,0.5); color:#94A3B8; font-size:12px;">ACE 미국채10년</span>
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(51,65,85,0.5); color:#94A3B8; font-size:12px;">+10</span>
+            </div>
+          </div>
+
+          <div class="mock-card">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="font-size:32px;">🇺🇸</div>
+              <div>
+                <div class="mock-card-title">미국 상장 ETF</div>
+                <div class="mock-card-sub" style="margin:0;">해외 직접 투자</div>
+              </div>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:6px; flex-wrap:wrap;">
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(51,65,85,0.5); color:#94A3B8; font-size:12px;">SPY</span>
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(51,65,85,0.5); color:#94A3B8; font-size:12px;">TLT</span>
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(51,65,85,0.5); color:#94A3B8; font-size:12px;">GLD</span>
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(51,65,85,0.5); color:#94A3B8; font-size:12px;">QQQ</span>
+              <span style="padding:3px 8px; border-radius:6px; background:rgba(51,65,85,0.5); color:#94A3B8; font-size:12px;">+14</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-num">6/8</div>
+</div>
+
+<!-- ======================================== -->
+<!-- Screenshot 7: 포트폴리오 저장 -->
+<!-- ======================================== -->
+<div class="screenshot style-dark" id="ss7">
+  <div class="ss-label">SS-7</div>
+  <div class="top-section">
+    <div class="headline">계산 결과를<br>저장하고 관리</div>
+    <div class="subtext">여러 전략의 포트폴리오를 비교</div>
+  </div>
+  <div class="phone-area">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="mockup-bg" style="background:#0F172A;">
+        <div class="status-bar"><span>9:41</span><span>100%</span></div>
+
+        <div style="padding:4px;">
+          <div class="mock-section-header">내 포트폴리오</div>
+
+          <div class="portfolio-card">
+            <div class="portfolio-card-top">
+              <div class="portfolio-name">올웨더 포트폴리오</div>
+              <div class="portfolio-date">2026.03.15</div>
+            </div>
+            <div class="portfolio-amount">10,000,000원</div>
+            <div class="portfolio-meta">한국 상장 ETF · 5개 종목</div>
+            <div class="mini-bar">
+              <div style="width:30%;height:100%;background:#3B82F6;"></div>
+              <div style="width:40%;height:100%;background:#10B981;"></div>
+              <div style="width:15%;height:100%;background:#F59E0B;"></div>
+              <div style="width:7.5%;height:100%;background:#EF4444;"></div>
+              <div style="width:7.5%;height:100%;background:#8B5CF6;"></div>
+            </div>
+          </div>
+
+          <div class="portfolio-card">
+            <div class="portfolio-card-top">
+              <div class="portfolio-name">듀얼 모멘텀</div>
+              <div class="portfolio-date">2026.03.10</div>
+            </div>
+            <div class="portfolio-amount">5,000,000원</div>
+            <div class="portfolio-meta">미국 상장 ETF · 1개 종목</div>
+            <div class="mini-bar">
+              <div style="width:100%;height:100%;background:#3B82F6;"></div>
+            </div>
+          </div>
+
+          <div class="portfolio-card">
+            <div class="portfolio-card-top">
+              <div class="portfolio-name">영구 포트폴리오</div>
+              <div class="portfolio-date">2026.03.01</div>
+            </div>
+            <div class="portfolio-amount">20,000,000원</div>
+            <div class="portfolio-meta">퇴직연금 ETF · 4개 종목</div>
+            <div class="mini-bar">
+              <div style="width:25%;height:100%;background:#3B82F6;"></div>
+              <div style="width:25%;height:100%;background:#10B981;"></div>
+              <div style="width:25%;height:100%;background:#EF4444;"></div>
+              <div style="width:25%;height:100%;background:#F59E0B;"></div>
+            </div>
+          </div>
+
+          <!-- FAB -->
+          <div style="position:absolute; bottom:90px; right:24px; width:56px; height:56px; border-radius:16px; background:linear-gradient(135deg,#2563EB,#3B82F6); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 20px rgba(37,99,235,0.4);">
+            <span style="font-size:28px; color:white; font-weight:300;">+</span>
+          </div>
+        </div>
+
+        <div class="tab-bar">
+          <div class="tab-item"><div class="tab-icon"></div>전략</div>
+          <div class="tab-item"><div class="tab-icon"></div>계산기</div>
+          <div class="tab-item active"><div class="tab-icon"></div>포트폴리오</div>
+          <div class="tab-item"><div class="tab-icon"></div>설정</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-num">7/8</div>
+</div>
+
+<!-- ======================================== -->
+<!-- Screenshot 8: 다크 모드 / 라이트 모드 비교 -->
+<!-- ======================================== -->
+<div class="screenshot style-dark" id="ss8">
+  <div class="ss-label">SS-8</div>
+  <div class="top-section">
+    <div class="headline">눈이 편한<br>다크 모드 지원</div>
+    <div class="subtext">라이트 / 다크 / 시스템 자동 전환</div>
+  </div>
+  <div class="phone-area" style="gap:20px; display:flex; justify-content:center;">
+    <!-- Light mode phone -->
+    <div class="phone-frame" style="width:175px; height:360px; border-radius:20px;">
+      <div class="phone-notch" style="width:70px; height:16px; border-radius:0 0 10px 10px;"></div>
+      <div class="mockup-bg light-mock" style="background:#F8F9FA; padding:8px;">
+        <div class="mock-section-header" style="font-size:11px; margin:4px 0 6px;">동적 전략</div>
+        <div class="mock-card" style="padding:10px; margin-bottom:6px; border-radius:10px;">
+          <div class="mock-card-title" style="font-size:10px;">듀얼 모멘텀</div>
+          <div class="mock-card-sub" style="font-size:8px; margin-bottom:4px;">Gary Antonacci</div>
+          <div style="display:flex;gap:4px;">
+            <span class="mock-badge badge-aggressive" style="font-size:8px;padding:2px 6px;">공격형</span>
+          </div>
+        </div>
+        <div class="mock-card" style="padding:10px; margin-bottom:6px; border-radius:10px;">
+          <div class="mock-card-title" style="font-size:10px;">VAA</div>
+          <div class="mock-card-sub" style="font-size:8px; margin-bottom:4px;">Wouter Keller</div>
+        </div>
+        <div class="mock-card" style="padding:10px; border-radius:10px;">
+          <div class="mock-card-title" style="font-size:10px;">올웨더</div>
+          <div class="mock-card-sub" style="font-size:8px; margin-bottom:4px;">Ray Dalio</div>
+        </div>
+        <div style="position:absolute;bottom:4px;left:0;right:0;text-align:center;font-size:9px;color:#9CA3AF;">라이트 모드</div>
+      </div>
+    </div>
+
+    <!-- Dark mode phone -->
+    <div class="phone-frame" style="width:175px; height:360px; border-radius:20px;">
+      <div class="phone-notch" style="width:70px; height:16px; border-radius:0 0 10px 10px;"></div>
+      <div class="mockup-bg" style="background:#0F172A; padding:8px;">
+        <div class="mock-section-header" style="font-size:11px; margin:4px 0 6px;">동적 전략</div>
+        <div class="mock-card" style="padding:10px; margin-bottom:6px; border-radius:10px;">
+          <div class="mock-card-title" style="font-size:10px;">듀얼 모멘텀</div>
+          <div class="mock-card-sub" style="font-size:8px; margin-bottom:4px;">Gary Antonacci</div>
+          <div style="display:flex;gap:4px;">
+            <span class="mock-badge badge-aggressive" style="font-size:8px;padding:2px 6px;">공격형</span>
+          </div>
+        </div>
+        <div class="mock-card" style="padding:10px; margin-bottom:6px; border-radius:10px;">
+          <div class="mock-card-title" style="font-size:10px;">VAA</div>
+          <div class="mock-card-sub" style="font-size:8px; margin-bottom:4px;">Wouter Keller</div>
+        </div>
+        <div class="mock-card" style="padding:10px; border-radius:10px;">
+          <div class="mock-card-title" style="font-size:10px;">올웨더</div>
+          <div class="mock-card-sub" style="font-size:8px; margin-bottom:4px;">Ray Dalio</div>
+        </div>
+        <div style="position:absolute;bottom:4px;left:0;right:0;text-align:center;font-size:9px;color:#64748B;">다크 모드</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-num">8/8</div>
+</div>
+
+</body>
+</html>
