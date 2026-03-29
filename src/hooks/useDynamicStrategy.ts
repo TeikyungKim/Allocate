@@ -44,12 +44,17 @@ export function useDynamicStrategy(strategy: Strategy): {
 
   // Fetch unemployment data for LAA
   const [unemploymentInfo, setUnemploymentInfo] = useState<UnemploymentInfo | null>(null);
+  const [unemploymentFailed, setUnemploymentFailed] = useState(false);
   useEffect(() => {
     if (dc?.method === 'laa') {
+      setUnemploymentFailed(false);
       fetchUnemploymentData().then((data) => {
         if (data) {
           const info = analyzeUnemployment(data);
-          setUnemploymentInfo(info);
+          if (info) setUnemploymentInfo(info);
+          else setUnemploymentFailed(true);
+        } else {
+          setUnemploymentFailed(true);
         }
       });
     }
@@ -58,8 +63,10 @@ export function useDynamicStrategy(strategy: Strategy): {
   const result = useMemo(() => {
     if (!dc || Object.keys(priceData.momentum).length === 0) {
       // LAA can work with just unemployment data
-      if (dc?.method === 'laa' && unemploymentInfo) {
-        const computed = computeDynamicAllocation(strategy, priceData.momentum, unemploymentInfo);
+      if (dc?.method === 'laa' && (unemploymentInfo || unemploymentFailed)) {
+        // If fetch failed, use default allocations (assume stable = keep US stocks)
+        const effectiveUnemp = unemploymentInfo ?? { isAbove: false, current: 0, sma12: 0 };
+        const computed = computeDynamicAllocation(strategy, priceData.momentum, effectiveUnemp);
         if (computed) {
           return { effectiveStrategy: { ...strategy, defaultAllocations: computed }, isDynamic: true };
         }
@@ -76,7 +83,7 @@ export function useDynamicStrategy(strategy: Strategy): {
       effectiveStrategy: { ...strategy, defaultAllocations: computed },
       isDynamic: true,
     };
-  }, [strategy, dc, priceData.momentum, unemploymentInfo]);
+  }, [strategy, dc, priceData.momentum, unemploymentInfo, unemploymentFailed]);
 
   return {
     ...result,

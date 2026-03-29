@@ -12,7 +12,7 @@ import { getETFUniverse } from '../../../data/etfs';
 import { formatWeight } from '../../../utils/format';
 import { StrategyStackParamList } from '../../navigation/types';
 import { FormulaExplainer } from './FormulaExplainer';
-import { computeDynamicAllocation } from '../../../core/engine/dynamicAllocator';
+import { computeDynamicAllocation, UnemploymentInfo } from '../../../core/engine/dynamicAllocator';
 import { TickerMomentum } from '../../../services/priceService';
 
 type Route = RouteProp<StrategyStackParamList, 'StrategyDetail'>;
@@ -31,6 +31,7 @@ export function StrategyDetailScreen() {
   const { customStrategies } = usePortfolio();
   const [universe, setUniverse] = useState<Universe>('us');
   const [momentumData, setMomentumData] = useState<Record<string, TickerMomentum>>({});
+  const [unemploymentData, setUnemploymentData] = useState<UnemploymentInfo | null>(null);
 
   // 빌트인 전략 또는 커스텀 전략 검색
   const strategy: Strategy | undefined = useMemo(() => {
@@ -64,14 +65,24 @@ export function StrategyDetailScreen() {
     setMomentumData(m);
   }, []);
 
+  const handleUnemploymentLoaded = useCallback((info: UnemploymentInfo) => {
+    setUnemploymentData(info);
+  }, []);
+
   // Compute dynamic allocation from real data, fallback to default
   const activeAllocations: StrategyAllocation[] = useMemo(() => {
-    if (dc && Object.keys(momentumData).length > 0) {
-      const computed = computeDynamicAllocation(strategy, momentumData);
-      if (computed) return computed;
+    if (dc) {
+      // LAA only needs unemployment data (no momentum required)
+      if (dc.method === 'laa' && unemploymentData) {
+        const computed = computeDynamicAllocation(strategy, momentumData, unemploymentData);
+        if (computed) return computed;
+      } else if (Object.keys(momentumData).length > 0) {
+        const computed = computeDynamicAllocation(strategy, momentumData);
+        if (computed) return computed;
+      }
     }
     return strategy.defaultAllocations;
-  }, [strategy, dc, momentumData]);
+  }, [strategy, dc, momentumData, unemploymentData]);
 
   const isDynamic = !!dc && activeAllocations !== strategy.defaultAllocations;
 
@@ -188,7 +199,7 @@ export function StrategyDetailScreen() {
       )}
 
       {/* 동적 전략: 공식 상세 (모멘텀 정의 + 자산별 현재값 + 판단 규칙) */}
-      <FormulaExplainer strategy={strategy} etfMap={etfMap} onMomentumLoaded={handleMomentumLoaded} />
+      <FormulaExplainer strategy={strategy} etfMap={etfMap} onMomentumLoaded={handleMomentumLoaded} onUnemploymentLoaded={handleUnemploymentLoaded} />
 
       {/* 정적 전략: 자산별 ETF 현재가 */}
       {!dc && (

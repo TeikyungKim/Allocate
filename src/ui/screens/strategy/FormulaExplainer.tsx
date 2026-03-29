@@ -12,6 +12,7 @@ interface Props {
   strategy: Strategy;
   etfMap: ETFUniverse;
   onMomentumLoaded?: (momentum: Record<string, TickerMomentum>) => void;
+  onUnemploymentLoaded?: (info: { isAbove: boolean; current: number; sma12: number }) => void;
 }
 
 // ── 스코어 유형별 정의 ──────────────────────────────────
@@ -339,7 +340,7 @@ function getPrimaryScore(m: TickerMomentum, scoreType: ScoreType): number | null
 
 // ── 메인 컴포넌트 ────────────────────────────────────
 
-export function FormulaExplainer({ strategy, etfMap, onMomentumLoaded }: Props) {
+export function FormulaExplainer({ strategy, etfMap, onMomentumLoaded, onUnemploymentLoaded }: Props) {
   const { theme } = useTheme();
   const dc = strategy.dynamicConfig;
   if (!dc) return null;
@@ -364,10 +365,22 @@ export function FormulaExplainer({ strategy, etfMap, onMomentumLoaded }: Props) 
   const [unemploymentInfo, setUnemploymentInfo] = useState<{
     isAbove: boolean; current: number; sma12: number;
   } | null>(null);
+  const [unemploymentError, setUnemploymentError] = useState(false);
   useEffect(() => {
     if (dc.method === 'laa') {
+      setUnemploymentError(false);
       fetchUnemploymentData().then((data) => {
-        if (data) setUnemploymentInfo(analyzeUnemployment(data));
+        if (data) {
+          const info = analyzeUnemployment(data);
+          if (info) {
+            setUnemploymentInfo(info);
+            onUnemploymentLoaded?.(info);
+          } else {
+            setUnemploymentError(true);
+          }
+        } else {
+          setUnemploymentError(true);
+        }
       });
     }
   }, [dc.method]);
@@ -666,6 +679,10 @@ export function FormulaExplainer({ strategy, etfMap, onMomentumLoaded }: Props) 
                 </Text>
               </View>
             </View>
+          ) : unemploymentError ? (
+            <Text style={[typography.small, { color: theme.danger ?? '#EF4444', fontStyle: 'italic' }]}>
+              실업률 데이터를 불러올 수 없습니다. 기본 배분(미국주식 25%)을 적용합니다.
+            </Text>
           ) : (
             <Text style={[typography.small, { color: theme.textTertiary, fontStyle: 'italic' }]}>
               실업률 데이터 로딩 중...

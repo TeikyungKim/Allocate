@@ -16,6 +16,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: '000000000000-placeholder.apps.googleusercontent.com',
+    });
+
     const unsubscribe = auth().onAuthStateChanged((u) => {
       setUser(u);
       setLoading(false);

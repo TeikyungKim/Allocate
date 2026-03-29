@@ -105,51 +105,76 @@ async function main() {
     writeFileSync(filePath, JSON.stringify({ ticker, prices, fetchedAt: new Date().toISOString() }));
   }
 
-  // Write combined manifest
+  // ── Fetch US unemployment rate from BLS ──
+  console.log('\n--- Fetching US unemployment rate (BLS) ---');
+  let hasUnemployment = false;
+  const BLS_API_KEY = process.env.BLS_API_KEY;
+  // Use v2 with key for higher limits (500/day), fallback to v1 (25/day)
+  const blsVersion = BLS_API_KEY ? 'v2' : 'v1';
+  const blsUrl = `https://api.bls.gov/publicAPI/${blsVersion}/timeseries/data/`;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const currentYear = new Date().getFullYear();
+      const bodyObj = {
+        seriesid: ['LNS14000000'],
+        startyear: String(currentYear - 2),
+        endyear: String(currentYear),
+      };
+      if (BLS_API_KEY) bodyObj.registrationkey = BLS_API_KEY;
+
+      console.log(`  Attempt ${attempt}/3 (API ${blsVersion})...`);
+      const blsRes = await fetch(blsUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyObj),
+      });
+      if (!blsRes.ok) {
+        throw new Error(`HTTP ${blsRes.status}`);
+      }
+      const blsJson = await blsRes.json();
+      if (blsJson.status === 'REQUEST_SUCCEEDED') {
+        const rawData = blsJson.Results.series[0].data;
+        // Convert to {date, value} sorted oldest → newest
+        const unemployment = rawData
+          .filter((d) => d.period !== 'M13') // exclude annual avg
+          .map((d) => ({
+            date: `${d.year}-${d.period.replace('M', '')}`,
+            value: parseFloat(d.value),
+          }))
+          .filter((d) => !isNaN(d.value)) // exclude null/NaN entries from BLS
+          .reverse();
+        writeFileSync(
+          join(OUTPUT_DIR, 'unemployment.json'),
+          JSON.stringify({ series: 'UNRATE', data: unemployment, fetchedAt: new Date().toISOString() }),
+        );
+        console.log(`  ✓ Unemployment: ${unemployment.length} months`);
+        hasUnemployment = true;
+        break;
+      } else {
+        throw new Error(`BLS API: ${blsJson.message?.[0] ?? 'Unknown error'}`);
+      }
+    } catch (e) {
+      console.error(`  ✗ Attempt ${attempt} failed: ${e.message}`);
+      if (attempt < 3) {
+        console.log(`  Retrying in 5s...`);
+        await sleep(5000);
+      }
+    }
+  }
+  if (!hasUnemployment) {
+    console.error('  ✗ All BLS attempts failed — unemployment.json not generated');
+  }
+
+  // Write combined manifest (after all data fetches)
   const manifest = {
     tickers: Object.keys(allPrices),
     updatedAt: new Date().toISOString(),
     count: Object.keys(allPrices).length,
     failed: results.failed,
+    hasUnemployment,
   };
   writeFileSync(join(OUTPUT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
-
-  // ── Fetch US unemployment rate from BLS (no API key needed) ──
-  console.log('\n--- Fetching US unemployment rate (BLS) ---');
-  try {
-    const currentYear = new Date().getFullYear();
-    const blsRes = await fetch('https://api.bls.gov/publicAPI/v1/timeseries/data/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        seriesid: ['LNS14000000'],
-        startyear: String(currentYear - 2),
-        endyear: String(currentYear),
-      }),
-    });
-    const blsJson = await blsRes.json();
-    if (blsJson.status === 'REQUEST_SUCCEEDED') {
-      const rawData = blsJson.Results.series[0].data;
-      // Convert to {date, value} sorted oldest → newest
-      const unemployment = rawData
-        .filter((d) => d.period !== 'M13') // exclude annual avg
-        .map((d) => ({
-          date: `${d.year}-${d.period.replace('M', '')}`,
-          value: parseFloat(d.value),
-        }))
-        .reverse();
-      writeFileSync(
-        join(OUTPUT_DIR, 'unemployment.json'),
-        JSON.stringify({ series: 'UNRATE', data: unemployment, fetchedAt: new Date().toISOString() }),
-      );
-      console.log(`  ✓ Unemployment: ${unemployment.length} months`);
-      manifest.hasUnemployment = true;
-    } else {
-      console.error('  ✗ BLS API error:', blsJson.message?.[0] ?? 'Unknown');
-    }
-  } catch (e) {
-    console.error('  ✗ Unemployment fetch error:', e.message);
-  }
 
   console.log(`\n=== Done ===`);
   console.log(`Success: ${results.success.length} / ${ALL_TICKERS.length}`);

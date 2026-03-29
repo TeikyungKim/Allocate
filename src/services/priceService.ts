@@ -170,7 +170,8 @@ export function analyzeUnemployment(data: UnemploymentData): {
   current: number;
   sma12: number;
 } | null {
-  const vals = data.data;
+  // Filter out null/NaN values (BLS sometimes returns null for certain months)
+  const vals = data.data.filter((d) => d.value != null && !isNaN(d.value));
   if (vals.length < 13) return null;
   const current = vals[vals.length - 1].value;
   const past12 = vals.slice(-13, -1);
