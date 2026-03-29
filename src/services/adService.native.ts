@@ -4,8 +4,8 @@ import { Platform } from 'react-native';
 const INTERSTITIAL_AD_UNIT_ID = __DEV__
   ? TestIds.INTERSTITIAL
   : Platform.select({
-      ios: 'ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ',
-      android: 'ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ',
+      ios: 'ca-app-pub-9164387280735910/3995337552',
+      android: 'ca-app-pub-9164387280735910/3995337552',
     }) || TestIds.INTERSTITIAL;
 
 let interstitial: InterstitialAd | null = null;

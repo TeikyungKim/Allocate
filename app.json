@@ -33,13 +33,19 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
-          "iosAppId": "ca-app-pub-3940256099942544~3347511713"
+          "androidAppId": "ca-app-pub-9164387280735910~1904466035",
+          "iosAppId": "ca-app-pub-9164387280735910~1904466035"
         }
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       "@react-native-google-signin/google-signin"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f354427b-d3d9-4a78-b4d2-3018c6d56a64"
+      }
+    },
+    "owner": "usek491"
   }
 }

@@ -17,7 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId: '000000000000-placeholder.apps.googleusercontent.com',
+      webClientId: '326705425735-bugms1bph56ll70b59u4afuie4dnkk5n.apps.googleusercontent.com',
     });
 
     const unsubscribe = auth().onAuthStateChanged((u) => {

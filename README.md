@@ -111,10 +111,57 @@ npx tsc --noEmit
 
 # 웹 빌드
 npx expo export --platform web
-
-# Android 릴리스 빌드 (디바이스 연결 필요)
-npx expo run:android --variant release
 ```
+
+### Expo와 EAS란?
+
+- **Expo** — React Native 앱을 쉽게 개발·빌드·배포할 수 있게 해주는 프레임워크. Android Studio나 Xcode 없이도 앱 개발 가능
+- **EAS (Expo Application Services)** — Expo에서 제공하는 클라우드 서비스
+  - **EAS Build** — 클라우드에서 APK/AAB/IPA 빌드 (로컬에 Android Studio/Xcode 불필요)
+  - **EAS Submit** — 빌드된 앱을 Google Play / App Store에 제출
+  - **EAS Secrets** — API 키 등 민감 정보를 안전하게 관리
+
+### EAS Build (실기기 빌드)
+
+이 프로젝트는 `react-native-google-mobile-ads`, `@react-native-firebase/app` 등 네이티브 모듈을 사용하므로 **Expo Go에서는 실행할 수 없습니다**. 실기기 테스트 및 스토어 배포에는 EAS Build가 필요합니다.
+
+```bash
+# EAS CLI 설치
+npm install -g eas-cli
+
+# Expo 계정 로그인 (비밀번호 계정)
+eas login
+
+# Google 등 SSO로 가입한 경우
+eas login --sso
+
+# Android 테스트용 APK 빌드
+eas build --platform android --profile preview
+
+# Android 스토어용 AAB 빌드
+eas build --platform android --profile production
+
+# iOS 빌드
+eas build --platform ios --profile production
+```
+
+#### 빌드 프로필 (`eas.json`)
+
+| 프로필 | 용도 | 출력 |
+|---|---|---|
+| `preview` | 내부 테스트 (APK 직접 설치) | `.apk` |
+| `production` | Google Play / App Store 제출 | `.aab` / `.ipa` |
+
+#### 민감 정보 관리 (EAS Secrets)
+
+API 키 등 민감 정보는 코드에 포함하지 않고 EAS Secrets로 관리합니다:
+
+```bash
+eas secret:create --name EXPO_PUBLIC_ADMOB_APP_ANDROID --value "ca-app-pub-XXXX~XXXX"
+eas secret:create --name EXPO_PUBLIC_ADMOB_APP_IOS --value "ca-app-pub-XXXX~XXXX"
+```
+
+등록된 시크릿은 EAS Build 시 자동으로 환경 변수에 주입됩니다.
 
 ## 면책조항
 

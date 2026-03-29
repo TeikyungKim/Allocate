@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ScreenWrapper, Card, Button, Badge } from '../../components';
+import { ScreenWrapper, Card, Button, Badge, AdBanner } from '../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { typography } from '../../../theme';
 import { usePortfolio } from '../../../contexts/PortfolioContext';
@@ -60,6 +60,7 @@ export function PortfolioListScreen() {
           )}
         />
       )}
+      <AdBanner placement="portfolio" />
     </ScreenWrapper>
   );
 }

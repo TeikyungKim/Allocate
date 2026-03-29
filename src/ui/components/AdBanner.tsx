@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export function AdBanner() {
+export function AdBanner({ placement = 'strategy' }: { placement?: 'strategy' | 'portfolio' }) {
   // Native ads are loaded via AdBanner.native.tsx
   // This is the web/fallback version
   return (
