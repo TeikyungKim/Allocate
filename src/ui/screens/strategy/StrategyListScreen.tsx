@@ -15,11 +15,18 @@ type Nav = NativeStackNavigationProp<StrategyStackParamList, 'StrategyList'>;
 export function StrategyListScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<Nav>();
-  const { customStrategies } = usePortfolio();
+  const { customStrategies, favoriteStrategyIds, toggleFavorite } = usePortfolio();
   const [filter, setFilter] = useState<'all' | 'static' | 'dynamic' | 'custom'>('all');
 
   // 시장 현황: 주요 자산 모멘텀 요약
   const marketTickers = ['SPY', 'EFA', 'EEM', 'AGG', 'GLD'];
+  const TICKER_LABELS: Record<string, string> = {
+    SPY: 'S&P500',
+    EFA: '선진국',
+    EEM: '신흥국',
+    AGG: '미국채권',
+    GLD: '금',
+  };
   const marketData = usePriceData(marketTickers);
   const marketStatus = useMemo(() => {
     const m = marketData.momentum;
@@ -48,14 +55,22 @@ export function StrategyListScreen() {
   );
 
   const allItems = useMemo(() => {
-    if (filter === 'custom') return customItems;
-    const base = strategies.filter((s) => {
-      if (filter === 'all') return true;
-      return s.type === filter;
-    });
-    if (filter === 'all' || filter === 'static') return [...base, ...customItems];
-    return base;
-  }, [filter, customItems]);
+    let items: Strategy[];
+    if (filter === 'custom') {
+      items = customItems;
+    } else {
+      const base = strategies.filter((s) => {
+        if (filter === 'all') return true;
+        return s.type === filter;
+      });
+      items = (filter === 'all' || filter === 'static') ? [...base, ...customItems] : base;
+    }
+    // 즐겨찾기를 상단에 고정
+    const favSet = new Set(favoriteStrategyIds);
+    const favs = items.filter((s) => favSet.has(s.id));
+    const rest = items.filter((s) => !favSet.has(s.id));
+    return [...favs, ...rest];
+  }, [filter, customItems, favoriteStrategyIds]);
 
   return (
     <ScreenWrapper scroll={false} padding={false}>
@@ -111,7 +126,7 @@ export function StrategyListScreen() {
                 const up = m.aboveSMA10m;
                 return (
                   <View key={t} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Text style={[typography.small, { color: theme.textSecondary }]}>{t}</Text>
+                    <Text style={[typography.small, { color: theme.textSecondary }]}>{TICKER_LABELS[t] ?? t}</Text>
                     <Text style={[typography.small, { color: up ? theme.success : theme.danger, fontWeight: '700' }]}>
                       {m.r12m != null ? `${(m.r12m * 100).toFixed(1)}%` : '-'}
                     </Text>
@@ -132,10 +147,10 @@ export function StrategyListScreen() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
           const isCustom = item.id.startsWith('custom-');
+          const isFav = favoriteStrategyIds.includes(item.id);
           return (
             <Card
               onPress={() => {
-                // 커스텀 전략은 'custom-' 접두사 제거하여 원래 ID로 상세 화면 이동
                 const realId = isCustom ? item.id.replace('custom-', '') : item.id;
                 navigation.navigate('StrategyDetail', { strategyId: realId });
               }}
@@ -149,11 +164,20 @@ export function StrategyListScreen() {
                     bgColor={isCustom ? theme.warningLight ?? theme.surfaceVariant : item.type === 'static' ? theme.successLight : theme.primaryLight}
                   />
                 </View>
-                {item.riskLevel && (
-                  <Text style={[typography.small, { color: theme.textTertiary }]}>
-                    위험도: {item.riskLevel}
-                  </Text>
-                )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {item.riskLevel && (
+                    <Text style={[typography.small, { color: theme.textTertiary }]}>
+                      위험도: {item.riskLevel}
+                    </Text>
+                  )}
+                  <Pressable
+                    onPress={() => toggleFavorite(item.id)}
+                    hitSlop={8}
+                    style={{ padding: 4 }}
+                  >
+                    <Text style={{ fontSize: 16 }}>{isFav ? '⭐' : '☆'}</Text>
+                  </Pressable>
+                </View>
               </View>
               <Text style={[typography.h3, { color: theme.text, marginTop: 8 }]}>{item.name}</Text>
               <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 4 }]} numberOfLines={2}>

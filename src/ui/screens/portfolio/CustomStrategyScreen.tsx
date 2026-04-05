@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, Alert, Modal, FlatList } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { ScreenWrapper, Card, Button } from '../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { typography } from '../../../theme';
@@ -67,7 +67,11 @@ export function CustomStrategyScreen() {
       createdAt: new Date().toISOString(),
     };
     await saveCustomStrategy(strategy);
-    navigation.goBack();
+    // 저장 후 계산기 탭으로 이동하여 해당 전략 선택
+    navigation.getParent()?.navigate('CalculatorTab', {
+      screen: 'Calculator',
+      params: { strategyId: strategy.id },
+    });
   };
 
   // Available options: current selection + unused classes

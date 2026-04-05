@@ -15,7 +15,9 @@ import { usePortfolio, SavedPortfolio, CustomStrategy } from '../../../contexts/
 import { showInterstitialAd } from '../../../services/adService';
 import { CalculatorStackParamList } from '../../navigation/types';
 import { useDynamicStrategy } from '../../../hooks/useDynamicStrategy';
+import { exportAllocationCSV } from '../../../services/csvExportService';
 import * as Haptics from 'expo-haptics';
+import { playCalculateSound, playSaveSound } from '../../../services/soundService';
 
 type Universe = 'korea' | 'retirement' | 'us';
 type Route = RouteProp<CalculatorStackParamList, 'Calculator'>;
@@ -99,6 +101,7 @@ export function CalculatorScreen() {
     if (amount <= 0) return;
     setShowResult(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    playCalculateSound();
     showInterstitialAd();
   };
 
@@ -115,6 +118,7 @@ export function CalculatorScreen() {
       createdAt: new Date().toISOString(),
     };
     await savePortfolio(portfolio);
+    playSaveSound();
     navigation.getParent()?.navigate('PortfolioTab');
   };
 
@@ -286,7 +290,25 @@ export function CalculatorScreen() {
             </Card>
           ))}
 
-          <Button title="포트폴리오 저장" onPress={handleSave} variant="secondary" size="large" style={{ marginBottom: 24 }} />
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
+            <Button title="포트폴리오 저장" onPress={handleSave} variant="secondary" size="large" style={{ flex: 1 }} />
+            <Button
+              title="CSV 내보내기"
+              onPress={() => {
+                if (!result) return;
+                exportAllocationCSV(
+                  result.allocations,
+                  amount,
+                  result.remainder,
+                  strategy.name,
+                  UNIVERSE_LABELS[universe],
+                );
+              }}
+              variant="outline"
+              size="large"
+              style={{ flex: 1 }}
+            />
+          </View>
         </View>
       )}
 

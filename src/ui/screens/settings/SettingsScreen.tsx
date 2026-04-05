@@ -1,16 +1,51 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator, Switch, Platform } from 'react-native';
 import { ScreenWrapper, Card, Button } from '../../components';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { usePortfolio } from '../../../contexts/PortfolioContext';
 import { typography } from '../../../theme';
+import {
+  getNotificationSettings,
+  saveNotificationSettings,
+  requestNotificationPermission,
+  NotificationSettings,
+} from '../../../services/notificationService';
+import { isSoundEnabled, setSoundEnabled, initSoundSettings } from '../../../services/soundService';
 
 export function SettingsScreen() {
   const { theme, themeMode, setThemeMode } = useTheme();
   const { user, signInWithGoogle, signOut, loading: authLoading } = useAuth();
   const { syncWithCloud, syncing, lastSyncedAt } = usePortfolio();
   const [authBusy, setAuthBusy] = useState(false);
+  const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
+  const [soundOn, setSoundOn] = useState(isSoundEnabled());
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      getNotificationSettings().then(setNotifSettings);
+    }
+    initSoundSettings().then(() => setSoundOn(isSoundEnabled()));
+  }, []);
+
+  const handleToggleRebalance = async (enabled: boolean) => {
+    if (enabled) {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        Alert.alert('권한 필요', '알림을 받으려면 설정에서 알림 권한을 허용해주세요.');
+        return;
+      }
+    }
+    const updated = { ...notifSettings!, rebalanceEnabled: enabled };
+    setNotifSettings(updated);
+    await saveNotificationSettings(updated);
+  };
+
+  const handleChangeDay = async (day: number) => {
+    const updated = { ...notifSettings!, rebalanceDay: day };
+    setNotifSettings(updated);
+    await saveNotificationSettings(updated);
+  };
 
   const themeOptions = [
     { key: 'system' as const, label: '시스템 설정' },
@@ -119,6 +154,44 @@ export function SettingsScreen() {
         </Card>
       )}
 
+      {/* 리밸런싱 알림 */}
+      {Platform.OS !== 'web' && notifSettings && (
+        <Card>
+          <View style={styles.syncHeader}>
+            <Text style={[typography.bodyBold, { color: theme.text }]}>리밸런싱 알림</Text>
+            <Switch
+              value={notifSettings.rebalanceEnabled}
+              onValueChange={handleToggleRebalance}
+              trackColor={{ true: theme.primary }}
+            />
+          </View>
+          <Text style={[typography.small, { color: theme.textSecondary, marginTop: 4 }]}>
+            매월 리밸런싱 시점을 알려줍니다
+          </Text>
+          {notifSettings.rebalanceEnabled && (
+            <View style={{ marginTop: 12 }}>
+              <Text style={[typography.captionBold, { color: theme.textSecondary }]}>알림 날짜 (매월)</Text>
+              <View style={styles.dayChips}>
+                {[1, 5, 10, 15, 20, 25].map((d) => (
+                  <Pressable
+                    key={d}
+                    onPress={() => handleChangeDay(d)}
+                    style={[
+                      styles.themeChip,
+                      { backgroundColor: notifSettings.rebalanceDay === d ? theme.primary : theme.surfaceVariant },
+                    ]}
+                  >
+                    <Text style={[typography.captionBold, { color: notifSettings.rebalanceDay === d ? '#FFF' : theme.textSecondary }]}>
+                      {d}일
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+        </Card>
+      )}
+
       {/* 테마 */}
       <Card>
         <Text style={[typography.bodyBold, { color: theme.text }]}>테마</Text>
@@ -145,6 +218,24 @@ export function SettingsScreen() {
             </Pressable>
           ))}
         </View>
+      </Card>
+
+      {/* 사운드 */}
+      <Card>
+        <View style={styles.syncHeader}>
+          <Text style={[typography.bodyBold, { color: theme.text }]}>효과음</Text>
+          <Switch
+            value={soundOn}
+            onValueChange={async (v) => {
+              setSoundOn(v);
+              await setSoundEnabled(v);
+            }}
+            trackColor={{ true: theme.primary }}
+          />
+        </View>
+        <Text style={[typography.small, { color: theme.textSecondary, marginTop: 4 }]}>
+          계산, 저장 시 효과음을 재생합니다
+        </Text>
       </Card>
 
       <Card>
@@ -179,4 +270,5 @@ const styles = StyleSheet.create({
   smallBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   googleBtn: { borderWidth: 1, borderRadius: 10, padding: 16, marginTop: 12 },
   syncHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  dayChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
 });

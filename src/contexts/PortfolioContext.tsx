@@ -46,6 +46,8 @@ interface PortfolioContextType {
   deletePortfolio: (id: string) => Promise<void>;
   saveCustomStrategy: (s: CustomStrategy) => Promise<void>;
   deleteCustomStrategy: (id: string) => Promise<void>;
+  favoriteStrategyIds: string[];
+  toggleFavorite: (strategyId: string) => Promise<void>;
   loading: boolean;
   syncWithCloud: (uid: string) => Promise<void>;
   syncing: boolean;
@@ -56,11 +58,13 @@ const PortfolioContext = createContext<PortfolioContextType | null>(null);
 
 const PORTFOLIOS_KEY = 'portfolios';
 const CUSTOM_STRATEGIES_KEY = 'customStrategies';
+const FAVORITES_KEY = 'favoriteStrategies';
 const LAST_SYNCED_KEY = 'lastSyncedAt';
 
 export function PortfolioProvider({ children }: { children: ReactNode }) {
   const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
   const [customStrategies, setCustomStrategies] = useState<CustomStrategy[]>([]);
+  const [favoriteStrategyIds, setFavoriteStrategyIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
@@ -69,10 +73,12 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     Promise.all([
       AsyncStorage.getItem(PORTFOLIOS_KEY),
       AsyncStorage.getItem(CUSTOM_STRATEGIES_KEY),
+      AsyncStorage.getItem(FAVORITES_KEY),
       AsyncStorage.getItem(LAST_SYNCED_KEY),
-    ]).then(([p, c, ls]) => {
+    ]).then(([p, c, f, ls]) => {
       if (p) setPortfolios(JSON.parse(p));
       if (c) setCustomStrategies(JSON.parse(c));
+      if (f) setFavoriteStrategyIds(JSON.parse(f));
       if (ls) setLastSyncedAt(ls);
       setLoading(false);
     });
@@ -113,6 +119,14 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     await persistCustomStrategies(updated);
   }, [customStrategies, persistCustomStrategies]);
 
+  const toggleFavorite = useCallback(async (strategyId: string) => {
+    const updated = favoriteStrategyIds.includes(strategyId)
+      ? favoriteStrategyIds.filter((id) => id !== strategyId)
+      : [...favoriteStrategyIds, strategyId];
+    setFavoriteStrategyIds(updated);
+    await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
+  }, [favoriteStrategyIds]);
+
   const syncWithCloud = useCallback(async (uid: string) => {
     setSyncing(true);
     try {
@@ -152,6 +166,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
         portfolios, customStrategies,
         savePortfolio, updatePortfolio, deletePortfolio,
         saveCustomStrategy, deleteCustomStrategy,
+        favoriteStrategyIds, toggleFavorite,
         loading, syncWithCloud, syncing, lastSyncedAt,
       }}
     >

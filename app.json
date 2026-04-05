@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Allocate",
+    "name": "ETF 자산 배분",
     "slug": "allocate",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A2E6B"
     },
     "ios": {
       "supportsTablet": true
@@ -18,7 +18,7 @@
       "package": "com.allocate.app",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0A2E6B",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

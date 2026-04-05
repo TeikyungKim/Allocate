@@ -6,12 +6,16 @@ import { PortfolioProvider } from './src/contexts/PortfolioContext';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { RootNavigator } from './src/ui/navigation/RootNavigator';
 import { initAds } from './src/services/adService';
+import { initNotifications } from './src/services/notificationService';
+import { initSoundSettings } from './src/services/soundService';
 
 function AppContent() {
   const { isDark } = useTheme();
 
   useEffect(() => {
     initAds();
+    initNotifications();
+    initSoundSettings();
   }, []);
 
   return (

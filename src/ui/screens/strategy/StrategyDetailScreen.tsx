@@ -12,6 +12,7 @@ import { getETFUniverse } from '../../../data/etfs';
 import { formatWeight } from '../../../utils/format';
 import { StrategyStackParamList } from '../../navigation/types';
 import { FormulaExplainer } from './FormulaExplainer';
+import { BacktestChart } from '../../components/BacktestChart';
 import { computeDynamicAllocation, UnemploymentInfo } from '../../../core/engine/dynamicAllocator';
 import { TickerMomentum } from '../../../services/priceService';
 
@@ -294,6 +295,9 @@ export function StrategyDetailScreen() {
           </View>
         ))}
       </Card>
+
+      {/* 백테스트 (정적 전략만) */}
+      {strategy.type === 'static' && <BacktestChart strategy={strategy} />}
 
       {strategy.rebalanceRule && (
         <Card style={{ marginTop: 4 }}>

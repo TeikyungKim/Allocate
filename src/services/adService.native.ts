@@ -1,4 +1,4 @@
-import { InterstitialAd, TestIds, AdEventType } from 'react-native-google-mobile-ads';
+import { InterstitialAd, TestIds, AdEventType, MobileAds } from 'react-native-google-mobile-ads';
 import { Platform } from 'react-native';
 
 const INTERSTITIAL_AD_UNIT_ID = __DEV__
@@ -33,6 +33,7 @@ export function showInterstitialAd(): boolean {
   return true;
 }
 
-export function initAds() {
+export async function initAds() {
+  await MobileAds().initialize();
   loadInterstitial();
 }
