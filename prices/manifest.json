@@ -1,29 +1,36 @@
 {
   "tickers": [
+    "EEM",
     "EFA",
-    "IVV",
+    "SPY",
     "VOO",
     "TLT",
-    "SPY",
-    "EEM",
-    "AGG",
+    "IAU",
     "IEF",
     "BND",
-    "IAU",
-    "SHY",
+    "VNQ",
     "GLD",
     "DBC",
-    "VNQ",
-    "HYG",
+    "SHY",
     "LQD",
     "QQQ",
     "VTV",
     "BIL",
     "SCHD",
+    "HYG",
     "VBR"
   ],
-  "updatedAt": "2026-09-15T23:57:17.243Z",
-  "count": 21,
-  "failed": [],
+  "updatedAt": "2026-09-17T00:03:50.920Z",
+  "count": 19,
+  "failed": [
+    {
+      "ticker": "IVV",
+      "error": "HTTP 520 for IVV"
+    },
+    {
+      "ticker": "AGG",
+      "error": "HTTP 520 for AGG"
+    }
+  ],
   "hasUnemployment": true
 }
